@@ -4,6 +4,7 @@ import { Label, FONTS, canvasTex } from '../label.js';
 import { words as w } from '../data/words.js';
 import { byId } from '../data/products.js';
 import { ShelfStocker, productTemplate } from '../products.js';
+import { brandArt } from '../art.js';
 
 // Store interior: x ∈ [-6, 6], z ∈ [-5, 5], entrance at the front (+z) around x = 3.
 
@@ -126,10 +127,25 @@ export function buildInterior(scene, mats, colliders) {
   }
   const lights = [];
   for (const [x, z] of [[-3.6, -2.6], [0, -2.6], [3.6, -2.6], [-3.6, 1.6], [0, 1.6], [3.6, 1.6]]) {
-    const L = new THREE.PointLight('#f4f7ff', 10, 7.5, 1.5);
+    const L = new THREE.PointLight('#f4f7ff', 3.2, 7.5, 1.5);
     L.position.set(x, 2.5, z);
     g.add(L);
     lights.push(L);
+  }
+  // shadow-casting downlights over each aisle: products shade the shelves below them
+  for (const [x, z] of [[-4.4, -0.6], [-2.0, -0.2], [0.4, -0.2], [2.85, -0.2], [-1.0, -3.5], [2.0, -3.5]]) {
+    const S = new THREE.SpotLight('#f6f8ff', 16, 9, 1.2, 0.85, 1.4);
+    S.position.set(x, 2.66, z);
+    S.target.position.set(x, 0, z + 0.01);
+    S.castShadow = true;
+    S.shadow.mapSize.set(1024, 1024);
+    S.shadow.bias = -0.0006;
+    S.shadow.normalBias = 0.015;
+    S.shadow.radius = 3;
+    S.shadow.camera.near = 0.3;
+    S.shadow.camera.far = 4;
+    g.add(S, S.target);
+    lights.push(S);
   }
 
   // --- back wall: walk-in drink fridges -------------------------------------
@@ -219,13 +235,13 @@ export function buildInterior(scene, mats, colliders) {
     { x: -3.2, sign: w.kappumen,
       nx: [['kitsune', 'curryudon', 'tenpura', 'tonkotsu', 'shio', 'seafood', 'miso', 'shoyu'], ['shoyu', 'miso', 'shio', 'seafood', 'tonkotsu', 'kitsune', 'curryudon'], ['yakisoba', 'shoyu', 'tonkotsu', 'miso', 'tenpura', 'shio'], ['seafood', 'kitsune', 'curryudon', 'tenpura', 'shoyu', 'miso', 'shio']],
       px: [['kakinotane', 'senbei', 'ebisen', 'popcorn', 'chips-select', 'chips-usushio'], ['chips-usushio', 'chips-norishio', 'chips-consomme', 'chips-select', 'ebisen', 'popcorn'], ['popcorn', 'senbei', 'kakinotane', 'chips-norishio', 'chips-consomme', 'ebisen'], ['gummy', 'gummy-budo', 'nodoame', 'caramel', 'gummy', 'gummy-budo', 'nodoame', 'caramel']] },
-    { x: -0.8, sign: w.okashi,
+    { x: -0.8, sign: w.okashi, sign2: w.nichiyohin,
       nx: [['cookie', 'biscuit', 'milkchoco', 'almondchoco', 'matchachoco', 'pyonstick', 'caramel'], ['pyonstick', 'matchachoco', 'almondchoco', 'milkchoco', 'cookie', 'biscuit', 'dango'], ['gummy', 'gummy-budo', 'nodoame', 'pyonstick', 'caramel', 'milkchoco', 'gummy'], ['dango', 'cookie', 'biscuit', 'matchachoco', 'almondchoco', 'dango']],
-      px: [['senbei', 'kakinotane', 'chips-select', 'ebisen', 'popcorn', 'senbei'], ['milkchoco', 'almondchoco', 'pyonstick', 'caramel', 'matchachoco', 'cookie', 'biscuit'], ['nodoame', 'gummy', 'gummy-budo', 'caramel', 'pyonstick', 'milkchoco', 'almondchoco'], ['biscuit', 'cookie', 'dango', 'matchachoco', 'milkchoco', 'pyonstick']] },
-    { x: 1.6, sign: w.nichiyohin,
-      // beauty & bath on the left side, everyday goods on the right
-      nx: [['shampoo', 'conditioner', 'bodysoap', 'shampoo'], ['keshosui', 'nyueki', 'keshosui-select', 'hiyakedome', 'keshosui'], ['sengan', 'handcream', 'hiyakedome', 'lipcream', 'handcream', 'sengan'], ['lipcream', 'menbo', 'haburashi', 'hamigaki', 'lipcream', 'menbo']],
-      px: [['tissue', 'mask', 'menbo', 'bansoko', 'tissue', 'mask'], ['kutsushita', 'cable', 'denchi', 'kutsushita', 'cable'], ['haburashi', 'hamigaki', 'note', 'ballpen', 'haburashi'], ['denchi', 'cable', 'ballpen', 'bansoko', 'denchi', 'note']] },
+      px: [['tissue', 'mask', 'menbo', 'bansoko', 'tissue', 'mask'], ['kutsushita', 'cable', 'denchi', 'kutsushita', 'cable'], ['haburashi', 'hamigaki', 'note', 'ballpen', 'haburashi', 'gum'], ['denchi', 'cable', 'ballpen', 'bansoko', 'gum', 'note']] },
+    { x: 1.6, sign: w.pyonBeauty, signBg: '#8a7fae',
+      // the beauty aisle: skincare & cosmetics on one side, hair & body on the other
+      nx: [['keshosui', 'nyueki', 'keshosui-select', 'biyoeki', 'cleansing'], ['sengan', 'hiyakedome', 'handcream', 'sheetmask', 'cotton', 'sengan'], ['lip-rose', 'lip-coral', 'mascara', 'eyeliner', 'polish-sakura', 'polish-yozora', 'foundation'], ['aburatori', 'lipcream', 'hairtie', 'cotton', 'sheetmask', 'aburatori']],
+      px: [['shampoo', 'conditioner', 'bodysoap', 'shampoo-refill'], ['shampoo', 'conditioner', 'cleansing', 'seikan', 'bodysoap'], ['hairwax', 'seikan', 'nyuyokuzai', 'hairwax', 'nyuyokuzai'], ['haburashi', 'hamigaki', 'menbo', 'lipcream', 'hairtie', 'haburashi']] },
   ];
   const levels = [0.12, 0.5, 0.88, 1.26];
   const gDepth = 0.4;
@@ -249,12 +265,12 @@ export function buildInterior(scene, mats, colliders) {
       });
     }
     colliders.add(G.x - 0.47, G.x + 0.47, gz0 - 0.03, gz1 + 0.36);
-    hangingSign(g, G.sign, G.x, 2.3, 0.6, FACE.pz, { w: 1.2 });
-    if (G.x > 1) hangingSign(g, w.pyonBeauty, G.x - 0.5, 2.32, -1.3, FACE.nx, { w: 1.2, bg: '#8a7fae' });
+    hangingSign(g, G.sign, G.x, 2.3, 0.6, FACE.pz, { w: 1.3, bg: G.signBg || '#3a4150' });
+    if (G.sign2) hangingSign(g, G.sign2, G.x + 0.6, 2.32, -1.3, FACE.px, { w: 1.1 });
   }
   // endcaps facing the entrance (promo: moon-viewing dumplings for October)
   const ez = gz1 + 0.17;
-  for (const [x, ids] of [[-3.2, ['chips-select', 'chips-usushio']], [-0.8, ['dango', 'dango']], [1.6, ['pyonstick', 'gummy', 'cookie']]]) {
+  for (const [x, ids] of [[-3.2, ['chips-select', 'chips-usushio']], [-0.8, ['dango', 'dango']], [1.6, ['lip-rose', 'polish-sakura', 'lip-coral', 'polish-yozora']]]) {
     addBox(g, [0.9, 0.12, 0.32], mats.shelfWhite, [x, 0.06, ez]);
     for (const y of [0.12, 0.55, 0.98]) {
       if (y > 0.2) addBox(g, [0.88, 0.02, 0.3], mats.shelfWhite, [x, y - 0.01, ez], { cast: false });
@@ -393,18 +409,88 @@ export function buildInterior(scene, mats, colliders) {
     addBox(g, [0.4, 0.28, 0.48], std('#dcdcd8', { roughness: 0.4 }), [5.7, 1.04, z]);
     addBox(g, [0.01, 0.2, 0.3], std('#111', { roughness: 0.1 }), [5.495, 1.04, z - 0.04], { cast: false });
   }
-  const backWall = canvasTex(512, 256, (c) => {
-    c.fillStyle = '#f0eee8'; c.fillRect(0, 0, 512, 256);
-    for (let r = 0; r < 6; r++) for (let k = 0; k < 24; k++) {
-      c.fillStyle = `hsl(${(k * 37 + r * 90) % 360},${30 + (k % 3) * 20}%,${45 + (r % 2) * 15}%)`;
-      c.fillRect(6 + k * 21, 10 + r * 40, 16, 26);
+  // behind the clerk: a warm wood-slat wall with the store roundel, and a hot-drink warmer
+  const slats = canvasTex(512, 256, (c) => {
+    c.fillStyle = '#b48a5e'; c.fillRect(0, 0, 512, 256);
+    for (let x = 0; x < 512; x += 32) {
+      c.fillStyle = x % 64 ? '#c49a6c' : '#b9905f';
+      c.fillRect(x + 2, 0, 28, 256);
+      c.fillStyle = 'rgba(0,0,0,0.18)';
+      c.fillRect(x, 0, 2, 256);
+      for (let k = 0; k < 6; k++) { c.fillStyle = 'rgba(90,55,25,0.12)'; c.fillRect(x + 4 + Math.random() * 22, Math.random() * 256, 2, 30 + Math.random() * 60); }
     }
-  });
-  const bw = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.0), std('#fff', { map: backWall }));
-  bw.position.set(5.99, 1.55, 0.5);
-  bw.rotation.y = FACE.nx;
-  g.add(bw);
+  }, { repeat: [3, 1] });
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.15), std('#ffffff', { map: slats, roughness: 0.7 }));
+  wall.position.set(5.99, 1.52, 0.5);
+  wall.rotation.y = FACE.nx;
+  g.add(wall);
+  if (brandArt.badge) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 256;
+    cv.getContext('2d').drawImage(brandArt.badge, 0, 0, 256, 256);
+    const t = new THREE.CanvasTexture(cv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    const roundel = new THREE.Mesh(new THREE.CircleGeometry(0.3, 48), new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.5 }));
+    roundel.position.set(5.975, 1.55, 1.75);
+    roundel.rotation.y = FACE.nx;
+    g.add(roundel);
+  }
+  // hot drink warmer (glass-front cabinet on the back counter)
+  const hx = 5.7, hz = -1.3;
+  addBox(g, [0.5, 0.5, 0.9], std('#c4302b', { roughness: 0.4 }), [hx, 1.15, hz]);
+  addBox(g, [0.46, 0.44, 0.86], std('#ffe8c8', { emissive: '#ff9a4a', emissiveIntensity: 0.35 }), [hx + 0.01, 1.15, hz], { cast: false });
+  const warmGlass = addBox(g, [0.01, 0.44, 0.86], mats.fridgeGlass, [hx - 0.255, 1.15, hz], { cast: false, receive: false });
+  warmGlass.userData.noHit = true;
+  for (const y of [0.93, 1.15]) {
+    addBox(g, [0.44, 0.012, 0.84], mats.shelfWhite, [hx, y, hz], { cast: false });
+    stockRun(stocker, tags, y < 1 ? ['milktea', 'hojicha', 'cafelatte'] : ['bito', 'milkcoffee', 'black', 'cafelatte'], {
+      start: V(hx - 0.24, y + 0.006, hz + 0.41), along: V(0, 0, -1), inward: V(1, 0, 0), length: 0.82, depth: 0.3, rotY: FACE.nx, rows: 1, tag: false, maxFacings: 3,
+    });
+  }
+  const hot = sign(w.hotDrink, { w: 0.42, h: 0.1, bg: '#c4302b', fg: '#fff', res: 256 });
+  hot.position.set(hx - 0.256, 1.43, hz);
+  hot.rotation.y = FACE.nx;
+  g.add(hot);
+  // stacked coffee cups by the machine side of the back counter
+  for (let i = 0; i < 3; i++) {
+    const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.035, 0.28, 16), std('#ffffff', { roughness: 0.5 }));
+    stack.position.set(5.72, 1.04, 1.9 + i * 0.12);
+    g.add(stack);
+  }
   colliders.add(5.45, 6, -2.4, 3.0);
+
+  // コスメ corner: a lit wall unit on the right wall by the entrance
+  {
+    const z0 = 3.2, z1 = 4.85, zc = (z0 + z1) / 2, len = z1 - z0, x = 5.62;
+    const body = std('#f6f1f4', { roughness: 0.45 });
+    addBox(g, [0.4, 0.12, len], body, [x + 0.18, 0.06, zc]);
+    addBox(g, [0.04, 1.9, len], std('#efe4ec', { roughness: 0.5 }), [5.98, 0.95, zc]);
+    for (const z of [z0, z1]) addBox(g, [0.42, 1.95, 0.03], body, [x + 0.19, 0.975, z]);
+    addBox(g, [0.42, 0.06, len + 0.03], std('#8a7fae', { roughness: 0.4 }), [x + 0.19, 1.98, zc]);
+    addBox(g, [0.35, 0.015, len - 0.04], mats.fridgeLight, [x + 0.2, 1.945, zc], { cast: false });
+    const levels = [0.12, 0.48, 0.84, 1.2, 1.55];
+    const plan = [['shampoo-refill', 'nyuyokuzai', 'cotton'], ['keshosui', 'biyoeki', 'nyueki', 'cleansing'], ['lip-rose', 'lip-coral', 'mascara', 'eyeliner', 'foundation'], ['polish-sakura', 'polish-yozora', 'lipcream', 'hairtie', 'aburatori'], ['sheetmask', 'handcream', 'hiyakedome', 'sheetmask']];
+    levels.forEach((y, i) => {
+      if (i > 0) addBox(g, [0.36, 0.015, len - 0.04], std('#ffffff', { roughness: 0.3 }), [x + 0.2, y - 0.008, zc], { cast: false });
+      addBox(g, [0.012, 0.035, len - 0.04], std('#d9b46a', { metalness: 0.8, roughness: 0.3 }), [x + 0.015, y - 0.02, zc], { cast: false });
+      stockRun(stocker, tags, plan[i], { start: V(x + 0.01, y, z0 + 0.03), along: V(0, 0, 1), inward: V(1, 0, 0), length: len - 0.06, depth: 0.3, rotY: FACE.nx, rows: 2, maxFacings: 3, tagY: -0.03 });
+    });
+    const head = sign(w.kosume, { w: 1.2, h: 0.32, bg: '#8a7fae', fg: '#ffffff', res: 512 });
+    head.position.set(5.6, 2.22, zc);
+    head.rotation.y = FACE.nx;
+    g.add(head);
+    // a vanity mirror strip
+    const mirrorTex = canvasTex(128, 128, (c) => {
+      const gr = c.createLinearGradient(0, 0, 128, 128);
+      gr.addColorStop(0, '#f4f6fa'); gr.addColorStop(0.45, '#d8dee8'); gr.addColorStop(0.5, '#f8fafc'); gr.addColorStop(1, '#c9d0db');
+      c.fillStyle = gr; c.fillRect(0, 0, 128, 128);
+    });
+    const mirror = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.32), new THREE.MeshBasicMaterial({ map: mirrorTex }));
+    mirror.position.set(5.96, 1.7, z1 - 0.3);
+    mirror.rotation.y = FACE.nx;
+    g.add(mirror);
+    colliders.add(x - 0.02, 6, z0 - 0.02, z1 + 0.02);
+  }
 
   // umbrella stand by the door, stocked with clear umbrellas you can pick up
   {

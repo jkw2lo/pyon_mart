@@ -43,6 +43,8 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.autoUpdate = false;   // re-rendered only when something actually moves
+const refreshShadows = () => (renderer.shadowMap.needsUpdate = true);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 $('#app').appendChild(renderer.domElement);
 
@@ -86,6 +88,7 @@ const env = createEnvironment(scene, renderer);
   const cubeCam = new THREE.CubeCamera(0.1, 30, cubeRT);
   cubeCam.position.set(0, 1.3, 0);
   env.update(13);
+  renderer.shadowMap.needsUpdate = true;
   cubeCam.update(renderer, scene);
   const interiorEnv = pmrem.fromCubemap(cubeRT.texture).texture;
   for (const m of [mats.floor, mats.fridgeGlass, mats.aluminium, mats.shelfEdge, mats.shelfWhite]) {
@@ -150,7 +153,7 @@ const basket = [];
 function openInspect(id, index = null) {
   const def = byId[id];
   inspecting = { def, id, index };
-  if (index !== null) int.stocker.setVisible(id, index, false);
+  if (index !== null) { int.stocker.setVisible(id, index, false); refreshShadows(); }
   player.enabled = false;
   clearHover();
   inspector.open(def);
@@ -167,7 +170,7 @@ function openInspect(id, index = null) {
 function closeInspect(keep = false) {
   if (!inspecting) return;
   const { id, index } = inspecting;
-  if (!keep && index !== null) int.stocker.setVisible(id, index, true);
+  if (!keep && index !== null) { int.stocker.setVisible(id, index, true); refreshShadows(); }
   inspecting = null;
   inspector.close();
   showTip(null);
@@ -332,6 +335,7 @@ function setTime(h) {
   for (const s of ext.signMats) s.mat.emissiveIntensity = s.day + (s.night - s.day) * st.night;
   for (const L of ext.streetLights) L.intensity = st.night * 18;
   for (const L of ext.canopyLights) L.intensity = st.night * 25;
+  refreshShadows();
   bloom.enabled = st.night > 0.25;
   bloom.strength = st.night * 0.35;
 }
@@ -356,6 +360,7 @@ function updateDoors(dt) {
   door.amt += (door.target - door.amt) * Math.min(1, dt * 4.5);
   for (const p of ext.doorPanels) p.position.x = p.userData.closedX + p.userData.side * door.amt * 0.9;
   ext.doorCollider.enabled = door.amt < 0.8;
+  if (Math.abs(door.target - door.amt) > 0.002) refreshShadows();
 }
 
 // --- hovering with the mouse --------------------------------------------------------

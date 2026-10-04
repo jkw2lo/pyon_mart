@@ -99,6 +99,7 @@ export class Inspector {
     this.spin.add(obj);
     this.def = def;
     const r = Math.max(size.x, size.y, size.z);
+    this.r = r;
     this.minDist = r * 1.3;
     this.maxDist = r * 5;
     // flat things (bento, trays, lids) are best seen from above
@@ -157,7 +158,7 @@ export class Inspector {
     s.lift = damp(s.lift, 1, 6, dt);
     this.spin.rotation.y = s.yaw;
     this.tilt.rotation.x = s.pitch;
-    this.tilt.position.y = (1 - s.lift) * -0.08;
+    this.tilt.position.y = (1 - s.lift) * -0.3 * this.r;
     this.camera.position.set(0, 0, s.dist);
     this.camera.lookAt(0, 0, 0);
     this.renderer.render(this.scene, this.camera);

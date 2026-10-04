@@ -229,6 +229,30 @@ export const products = [
   { id: 'mag-game', shape: 'magazine', cat: 'magazine', price: 650, brand: w.shukan, title: w.game, sub: w.shinShohin, bg: '#1b1e5a', fg: '#e8ff3a', accent: '#ff3aa8', cover: 'game' },
   { id: 'mag-kuruma', shape: 'magazine', cat: 'magazine', price: 720, brand: w.gekkan, title: w.kuruma, sub: w.tokushu, bg: '#2a2d33', fg: '#ffffff', accent: '#c4302b', cover: 'car' },
   { id: 'mag-neko', shape: 'magazine', cat: 'magazine', price: 640, brand: w.gekkan, title: w.neko, sub: w.tokushu, bg: '#fff3dc', fg: '#a3502a', accent: '#f2a65a', cover: 'cat' },
+  // ===== Cosmetics (the コスメ corner) ===========================================
+  { id: 'lip-rose', shape: 'lipstick', cat: 'cosme', price: 1320, style: 'clean', brand: w.hanagasumi, bg: '#1d1d22', fg: '#e8c27a', accent: '#c4405a', shade: '#b8304a', title: w.kuchibeni, sub: w.rose },
+  { id: 'lip-coral', shape: 'lipstick', cat: 'cosme', price: 1320, style: 'clean', brand: w.hanagasumi, bg: '#1d1d22', fg: '#e8c27a', accent: '#ff7a6a', shade: '#f2705a', title: w.kuchibeni, sub: w.coral },
+  { id: 'mascara', shape: 'wand', cat: 'cosme', price: 1100, style: 'dark', brand: w.hanagasumi, bg: '#1d1d22', fg: '#f2c4cf', accent: '#f2c4cf', title: w.mascara, sub: w.mizuni },
+  { id: 'eyeliner', shape: 'wand', cat: 'cosme', price: 990, ...BEAUTY, fg: '#5a4a8a', accent: '#c8c0e8', slim: true, title: w.eyeliner, sub: w.mizuni },
+  { id: 'polish-sakura', shape: 'polish', cat: 'cosme', price: 550, ...BEAUTY, fg: '#c3264f', accent: '#ffc2d0', shade: '#f6a8bc', title: w.manicure, sub: w.sakuraIro },
+  { id: 'polish-yozora', shape: 'polish', cat: 'cosme', price: 550, ...BEAUTY, fg: '#1d2a6a', accent: '#8a9ae0', shade: '#2a3a8a', title: w.manicure, sub: w.yozoraIro },
+  { id: 'foundation', shape: 'compact', cat: 'cosme', price: 1650, style: 'clean', brand: w.hanagasumi, bg: '#f4e4d6', fg: '#8a5a3a', accent: '#e8c2a0', shade: '#e8c2a0', title: w.foundation, sub: w.natural },
+  { id: 'biyoeki', shape: 'dropper', cat: 'cosme', price: 1980, style: 'clean', brand: w.hanagasumi, bg: '#ffffff', fg: '#a3405a', accent: '#f2c4cf', liquid: '#f6d0a0', title: w.biyoeki, sub: w.uruoi },
+  { id: 'cleansing', shape: 'pump', cat: 'cosme', price: 880, small: true, ...BEAUTY, fg: '#a07a1a', accent: '#f2d675', art: 'drop', artColors: ['#f2d675', '#a07a1a'], title: w.cleansing, sub: w.kirei },
+  { id: 'sheetmask', shape: 'bag', size: 'sachet', cat: 'cosme', price: 330, ...BEAUTY, fg: '#3a6a9a', accent: '#a8d0f0', art: 'drop', artColors: ['#a8d0f0', '#3a6a9a'], title: w.sheetMask, sub: w.uruoi },
+  { id: 'cotton', shape: 'box', cat: 'cosme', price: 220, dims: [0.09, 0.06, 0.06], ...BEAUTY, fg: '#5a4a8a', accent: '#ffffff', art: 'box', artColors: ['#ffffff', '#c8c0e8'], title: w.cotton, sub: w.muko },
+  { id: 'hairtie', shape: 'card', cat: 'cosme', price: 330, ...BEAUTY, fg: '#5a4a8a', accent: '#c8c0e8', item: 'ties', itemColor: '#3a3d42', title: w.hairTie, sub: w.kuro },
+  { id: 'hairwax', shape: 'jar', cat: 'cosme', price: 880, style: 'dark', brand: w.tsukiakari, bg: '#1d2a4a', fg: '#f2d675', accent: '#f2d675', title: w.hairWax, sub: w.hard },
+  { id: 'seikan', shape: 'spray', cat: 'cosme', price: 598, style: 'clean', brand: w.moriShizuku, bg: '#e8f4fb', fg: '#1a5a86', accent: '#62b3e3', art: 'drop', artColors: ['#62b3e3', '#1a5a86'], title: w.seikan, sub: w.muko },
+  { id: 'nyuyokuzai', shape: 'box', cat: 'cosme', price: 498, dims: [0.12, 0.14, 0.05], style: 'tea', brand: w.tsukiakari, bg: '#fff3c0', fg: '#7a5a10', accent: '#f2c23a', art: 'slice', artColors: ['#f2c23a', '#fff8d0'], title: w.nyuyokuzai, sub: w.yuzu },
+  { id: 'aburatori', shape: 'box', cat: 'cosme', price: 280, dims: [0.07, 0.1, 0.012], style: 'tea', brand: w.hanagasumi, bg: '#f2d6c8', fg: '#7a2a2a', accent: '#c4605a', art: 'leaf', artColors: ['#e8a0a0', '#c4605a'], title: w.aburatori, sub: w.kirei },
+  { id: 'shampoo-refill', shape: 'pouch', cat: 'bath', price: 498, style: 'dark', brand: w.tsukiakari, bg: '#1d2a4a', fg: '#f2d675', accent: '#f2d675', art: 'sparkle', artColors: ['#f2d675'], title: w.shampoo, sub: w.tsumekae },
+
+  // ===== A few more snacks & drinks ===========================================
+  { id: 'jelly', shape: 'pouch', cat: 'drink', price: 216, style: 'pop', brand: w.hoshizora, bg: '#2a6ad0', fg: '#ffffff', accent: '#ffd23a', art: 'sparkle', artColors: ['#ffd23a'], title: w.jelly, sub: w.energy, small: true },
+  { id: 'gum', shape: 'box', cat: 'snack', price: 140, dims: [0.08, 0.05, 0.02], style: 'pop', brand: w.manmaru, bg: '#3ac0a0', fg: '#ffffff', accent: '#1d6a5a', art: 'sparkle', artColors: ['#ffffff'], title: w.gum, sub: w.mint },
+  { id: 'cornsoup', shape: 'box', cat: 'noodle', price: 258, dims: [0.13, 0.11, 0.05], ...SEL, fg: '#a07a1a', accent: '#f2d23a', art: 'bowl', artColors: ['#f2d23a', '#f6e08a'], title: w.cornSoup, sub: w.oyuIrete },
+  { id: 'cheesecake', shape: 'tray', cat: 'sweets', price: 280, ...SWEETS, fg: '#a3502a', accent: '#f6d47a', art: 'pudding', artColors: ['#f6e0a0', '#c48a3a'], title: w.cheesecake, sub: w.noko, dims: [0.11, 0.06, 0.09] },
 ];
 
 for (const p of products) {

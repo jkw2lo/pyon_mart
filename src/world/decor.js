@@ -265,66 +265,124 @@ function aFrame(parent, x, z, rotY) {
   const mat = L.material({ roughness: 0.9 });
   for (const s of [1, -1]) {
     const board = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.02), [std('#7a5a3a'), std('#7a5a3a'), std('#7a5a3a'), std('#7a5a3a'), mat, std('#7a5a3a')]);
-    board.position.set(0, 0.4, s * 0.12);
-    board.rotation.x = s * 0.17;
-    if (s < 0) board.rotation.y = Math.PI;
+    // the two boards lean in and meet at the top, like a real sandwich board
+    board.rotation.order = 'YXZ';
+    board.rotation.y = s < 0 ? Math.PI : 0;
+    board.rotation.x = -0.26;
+    board.position.set(0, 0.37, s * 0.1);
     board.userData.sign = true;
     g.add(board);
   }
+  addBox(g, [0.5, 0.03, 0.05], std('#5a4030'), [0, 0.72, 0], { cast: false });
   g.position.set(x, 0, z);
   g.rotation.y = rotY;
   parent.add(g);
 }
 
 
-// The clerk: a friendly hare in the Pyon Mart uniform.
+// The clerk: ぴょんさん, a round, friendly hare in the Pyon Mart uniform.
+// Chibi proportions — big head, big glossy eyes, blush — so it reads as a mascot.
 function hareClerk(parent, x, z, rotY) {
   const g = new THREE.Group();
-  const fur = std('#e9e6e1', { roughness: 0.85 });
-  const furDark = std('#cfcac2', { roughness: 0.85 });
+  const fur = std('#dcdde3', { roughness: 0.9 });
+  const furLight = std('#f6f5f3', { roughness: 0.9 });
+  const pink = std('#f4b8c4', { roughness: 0.8 });
   const uniform = std('#2b3140', { roughness: 0.6 });
-  const gold = std('#f2d675', { roughness: 0.5 });
   const shirt = std('#ffffff', { roughness: 0.7 });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.45, 6, 16), shirt);
-  body.position.y = 1.0;
-  g.add(body);
-  const apron = new THREE.Mesh(new THREE.CapsuleGeometry(0.205, 0.38, 6, 16, 1), uniform);
-  apron.scale.set(1.02, 1, 0.75);
-  apron.position.set(0, 0.96, 0.05);
+  const gold = std('#f2d675', { roughness: 0.5 });
+
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.3, 8, 20), shirt);
+  torso.position.y = 0.98;
+  torso.scale.set(1, 1, 0.85);
+  g.add(torso);
+  const apron = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.26, 8, 20), uniform);
+  apron.scale.set(1.04, 1, 0.9);
+  apron.position.set(0, 0.94, 0.012);
   g.add(apron);
-  const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.012, 6, 32), gold);
-  stripe.rotation.x = Math.PI / 2;
-  stripe.scale.set(1.02, 0.78, 1);
-  stripe.position.set(0, 1.14, 0.05);
-  g.add(stripe);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 24, 18), fur);
-  head.scale.set(1, 0.95, 1.05);
-  head.position.y = 1.55;
-  g.add(head);
-  const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), std('#f6f3ee'));
-  muzzle.position.set(0, 1.5, 0.14);
-  g.add(muzzle);
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), std('#e89aa8'));
-  nose.position.set(0, 1.53, 0.205);
-  g.add(nose);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.018, 8, 28), gold);
+  collar.rotation.x = Math.PI / 2;
+  collar.position.y = 1.2;
+  g.add(collar);
+  if (brandArt.badge) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    cv.getContext('2d').drawImage(brandArt.badge, 0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(cv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    const badge = new THREE.Mesh(new THREE.CircleGeometry(0.035, 24), new THREE.MeshStandardMaterial({ map: t, transparent: true }));
+    badge.position.set(-0.08, 1.07, 0.17);
+    g.add(badge);
+  }
+
+  const headG = new THREE.Group();
+  headG.position.y = 1.47;
+  g.add(headG);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 32, 24), fur);
+  head.scale.set(1.08, 0.95, 1);
+  headG.add(head);
+  const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 16), furLight);
+  muzzle.scale.set(1.25, 0.8, 0.7);
+  muzzle.position.set(0, -0.065, 0.15);
+  headG.add(muzzle);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.017, 12, 10), std('#e88a9c', { roughness: 0.4 }));
+  nose.scale.set(1.3, 0.8, 1);
+  nose.position.set(0, -0.035, 0.215);
+  headG.add(nose);
+  // little ω mouth
   for (const s of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), std('#2b3140', { roughness: 0.2 }));
-    eye.position.set(s * 0.07, 1.6, 0.145);
-    g.add(eye);
-    const ear = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.26, 6, 12), fur);
-    ear.position.set(s * 0.07, 1.86, -0.02);
-    ear.rotation.set(-0.15, 0, s * 0.18);
-    ear.userData.ear = s;
-    g.add(ear);
-    const inner = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.2, 4, 8), std('#f2c4cc'));
-    inner.position.set(0, 0, 0.03);
+    const m = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.0035, 6, 16, Math.PI), std('#6a4a50'));
+    m.rotation.z = Math.PI;
+    m.position.set(s * 0.014, -0.06, 0.212);
+    headG.add(m);
+  }
+  const eyes = [];
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Group();
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.034, 20, 16), std('#22252e', { roughness: 0.15 }));
+    ball.scale.set(0.9, 1.15, 0.6);
+    eye.add(ball);
+    const shine = new THREE.Mesh(new THREE.SphereGeometry(0.011, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+    shine.position.set(s * -0.008 + 0.006, 0.014, 0.02);
+    eye.add(shine);
+    const shine2 = new THREE.Mesh(new THREE.SphereGeometry(0.005, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+    shine2.position.set(-0.008, -0.012, 0.02);
+    eye.add(shine2);
+    eye.position.set(s * 0.085, 0.0, 0.178);
+    eye.rotation.y = s * 0.35;
+    headG.add(eye);
+    eyes.push(eye);
+    const cheek = new THREE.Mesh(new THREE.CircleGeometry(0.032, 20), new THREE.MeshBasicMaterial({ color: '#f6a0b4', transparent: true, opacity: 0.55, depthWrite: false }));
+    cheek.scale.set(1.3, 0.8, 1);
+    cheek.position.set(s * 0.13, -0.05, 0.16);
+    cheek.rotation.y = s * 0.7;
+    headG.add(cheek);
+  }
+  // ears: one up, one flopped forward
+  const ears = [];
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Group();
+    const outer = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.16, 8, 16), fur);
+    outer.scale.set(1, 1, 0.55);
+    outer.position.y = 0.12;
+    ear.add(outer);
+    const inner = new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.12, 6, 12), pink);
+    inner.scale.set(1, 1, 0.3);
+    inner.position.set(0, 0.12, 0.022);
     ear.add(inner);
-    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.3, 4, 10), shirt);
-    arm.position.set(s * 0.24, 1.05, 0.06);
-    arm.rotation.set(-0.5, 0, s * 0.15);
+    ear.position.set(s * 0.085, 0.15, -0.02);
+    ear.rotation.set(s > 0 ? 0.9 : -0.12, 0, s * 0.22);
+    ear.userData.base = ear.rotation.clone();
+    ear.userData.side = s;
+    headG.add(ear);
+    ears.push(ear);
+  }
+  for (const s of [-1, 1]) {
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.18, 6, 12), shirt);
+    arm.position.set(s * 0.21, 1.02, 0.08);
+    arm.rotation.set(-0.9, 0, s * 0.25);
     g.add(arm);
-    const paw = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 10), furDark);
-    paw.position.set(s * 0.25, 0.88, 0.2);
+    const paw = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), furLight);
+    paw.position.set(s * 0.22, 0.98, 0.24);
     g.add(paw);
   }
   // name tag
@@ -332,13 +390,14 @@ function hareClerk(parent, x, z, rotY) {
   L.rect(0, 0, 160, 18, '#2b3140');
   L.text(w.pyonMart, 80, 41, { size: 22, color: '#2b3140', maxW: 150 });
   const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.04), L.material());
-  tag.position.set(0.09, 1.18, 0.205);
+  tag.position.set(0.08, 1.08, 0.18);
   tag.userData.sign = true;
   g.add(tag);
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (!o.userData.sign) o.userData.register = true; } });
   g.position.set(x, 0, z);
   g.rotation.y = rotY;
   parent.add(g);
+  g.userData = { headG, eyes, ears };
   return g;
 }
 
@@ -361,11 +420,11 @@ export function buildDecor(scene, mats, colliders, { nightMats, signMats }) {
     g.add(p);
   }
   // autumn campaign poster on the right wall by the entrance
-  const ap = plane(autumnPoster(), 0.7, 0.98);
-  ap.position.set(5.985, 1.55, 3.9);
-  ap.rotation.y = FACE.nx;
+  const ap = plane(autumnPoster(), 0.52, 0.73);
+  ap.position.set(-5.975, 2.02, 3.3);
+  ap.rotation.y = FACE.px;
   g.add(ap);
-  addBox(g, [0.02, 1.04, 0.76], std('#c9a45a', { metalness: 0.5, roughness: 0.4 }), [5.99, 1.55, 3.9], { cast: false });
+  addBox(g, [0.02, 0.78, 0.57], std('#c9a45a', { metalness: 0.5, roughness: 0.4 }), [-5.985, 2.02, 3.3], { cast: false });
 
   // --- hanging campaign banner over the aisles ---
   const banner = new Label(1024, 200);
@@ -522,7 +581,8 @@ export function buildDecor(scene, mats, colliders, { nightMats, signMats }) {
   colliders.rect(1.4, 6.25, 0.6, 0.4);
 
   const clerk = hareClerk(g, 4.95, 1.4, -Math.PI / 2);
-  const ears = clerk.children.filter((o) => o.userData.ear);
+  const { headG, eyes, ears } = clerk.userData;
+  let blink = 2;
 
   let t = 0;
   return {
@@ -545,8 +605,17 @@ export function buildDecor(scene, mats, colliders, { nightMats, signMats }) {
       hourHand.rotation.z = -(h / 12) * TAU;
       minHand.rotation.z = -((hours % 1)) * TAU;
       // the clerk breathes, and twitches an ear now and then
-      clerk.position.y = Math.sin(t * 1.6) * 0.008;
-      for (const e of ears) e.rotation.z = e.userData.ear * 0.18 + (Math.sin(t * 0.7 + e.userData.ear) > 0.96 ? e.userData.ear * 0.25 : 0);
+      clerk.position.y = Math.sin(t * 1.6) * 0.006;
+      headG.rotation.z = Math.sin(t * 0.5) * 0.06;
+      headG.rotation.x = Math.sin(t * 0.37) * 0.04;
+      blink -= dt;
+      const closed = blink < 0.12;
+      if (blink < 0) blink = 2.5 + Math.random() * 3;
+      for (const e of eyes) e.scale.y = closed ? 0.12 : 1;
+      for (const e of ears) {
+        const twitch = Math.sin(t * 0.9 + e.userData.side * 2) > 0.97 ? 0.18 : 0;
+        e.rotation.z = e.userData.base.z + e.userData.side * twitch;
+      }
       // a little shimmer on the oden broth
       oden.broth.material.emissiveIntensity = 0.18 + Math.sin(t * 3) * 0.04;
     },

@@ -510,7 +510,7 @@ function pillow(w, h, d, segX = 12, segY = 14) {
 
 function bag(def) {
   const g = new THREE.Group();
-  const [w, h, d] = def.size === 'small' ? [0.12, 0.16, 0.035] : def.size === 'bar' ? [0.075, 0.19, 0.022] : [0.17, 0.235, 0.065];
+  const [w, h, d] = def.size === 'small' ? [0.12, 0.16, 0.035] : def.size === 'bar' ? [0.075, 0.19, 0.022] : def.size === 'sachet' ? [0.1, 0.15, 0.008] : [0.17, 0.235, 0.065];
   const foil = { roughness: 0.3, metalness: 0.25, bumpMap: crinkleMap(), bumpScale: 0.8 };
   const front = flatLabel(def, w, h).material(foil);
   const back = flatLabel(def, w, h, { back: true }).material(foil);
@@ -689,42 +689,262 @@ function tube(def) {
   return g;
 }
 
-// Pump bottle: rounded-rect body, collar, pump head and nozzle.
+// Side surface of a rounded-rectangle prism with "wrap" UVs: u runs once round
+// the perimeter (back → left → front at u=0.5 → right → back), v runs up. So a
+// wrap label printed on it follows the rounded corners like a real sleeve.
+// `taper(t)` scales the cross-section with height (for shoulders).
+function roundedPerimeter(w, d, r, n = 96) {
+  const p = new THREE.Path();
+  p.moveTo(0, -d / 2);
+  p.lineTo(-w / 2 + r, -d / 2);
+  p.absarc(-w / 2 + r, -d / 2 + r, r, -Math.PI / 2, -Math.PI, true);
+  p.lineTo(-w / 2, d / 2 - r);
+  p.absarc(-w / 2 + r, d / 2 - r, r, Math.PI, Math.PI / 2, true);
+  p.lineTo(w / 2 - r, d / 2);
+  p.absarc(w / 2 - r, d / 2 - r, r, Math.PI / 2, 0, true);
+  p.lineTo(w / 2, -d / 2 + r);
+  p.absarc(w / 2 - r, -d / 2 + r, r, 0, -Math.PI / 2, true);
+  p.lineTo(0, -d / 2);
+  return p.getSpacedPoints(n);
+}
+
+export function roundedPrism(w, d, h, r, { rows = 8, taper = () => 1, n = 96 } = {}) {
+  const ring = roundedPerimeter(w, d, r, n);
+  const pos = [], uv = [], idx = [];
+  for (let j = 0; j <= rows; j++) {
+    const t = j / rows, k = taper(t);
+    for (let i = 0; i <= n; i++) {
+      const q = ring[i % ring.length];
+      pos.push(q.x * k, t * h, q.y * k);
+      uv.push(i / n, t);
+    }
+  }
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < n; i++) {
+      const a = j * (n + 1) + i, b = a + n + 1;
+      idx.push(a, a + 1, b, b, a + 1, b + 1);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function roundedCap(w, d, r, y, k = 1, up = true) {
+  const pts = roundedPerimeter(w * k, d * k, r * k, 48).map((q) => new THREE.Vector2(q.x, -q.y));
+  const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));
+  geo.rotateX(up ? -Math.PI / 2 : Math.PI / 2);
+  geo.translate(0, y, 0);
+  return geo;
+}
+
+// Pump bottle: rounded body printed all the way round, with collar and pump head.
 function pump(def) {
   const g = new THREE.Group();
-  const w = 0.078, d = 0.052, h = 0.17;
-  const sh = new THREE.Shape();
-  sh.absarc(-w / 2 + 0.018, 0, 0.018, Math.PI / 2, (3 * Math.PI) / 2);
-  sh.absarc(w / 2 - 0.018, 0, 0.018, -Math.PI / 2, Math.PI / 2);
-  // squash to the bottle's depth
-  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: true, bevelSize: 0.004, bevelThickness: 0.006, bevelSegments: 3, curveSegments: 12 }), plain(def.bg, { roughness: 0.25, metalness: 0.05 }));
-  body.rotation.x = -Math.PI / 2;
-  body.scale.set(1, d / 0.036, 1);
-  body.position.y = 0.006;
+  const small = def.small;
+  const w = small ? 0.06 : 0.078, d = small ? 0.04 : 0.052, h = small ? 0.13 : 0.17, r = d * 0.42;
+  const shoulder = (t) => (t < 0.86 ? 1 : 1 - 0.32 * Math.sin(((t - 0.86) / 0.14) * Math.PI / 2));
+  const perim = 2 * (w + d) - 8 * r + 2 * Math.PI * r;
+  const L = wrapLabel(def, perim, h);
+  const body = new THREE.Mesh(roundedPrism(w, d, h, r, { rows: 14, taper: shoulder }), L.material({ roughness: 0.28, metalness: 0.05 }));
   g.add(body);
-  const lw = w * 0.86, lh = h * 0.72;
-  const L = flatLabel(def, lw, lh);
-  const label = new THREE.Mesh(new THREE.PlaneGeometry(lw, lh), L.material({ roughness: 0.3 }));
-  const fz = (0.018 + 0.004) * (d / 0.036) + 0.0015;   // just proud of the bevelled front
-  label.position.set(0, 0.006 + h * 0.48, fz);
-  g.add(label);
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(lw, lh), flatLabel(def, lw, lh, { back: true }).material({ roughness: 0.35 }));
-  back.position.set(0, 0.006 + h * 0.48, -fz);
-  back.rotation.y = Math.PI;
-  g.add(back);
+  const capMat = plain(def.style === 'select' ? def.band : def.bg, { roughness: 0.3 });
+  g.add(new THREE.Mesh(roundedCap(w, d, r, h, 0.68), capMat));
+  g.add(new THREE.Mesh(roundedCap(w, d, r, 0.0005, 1, false), capMat));
   const headMat = plain(def.style === 'select' ? def.band : def.fg, { roughness: 0.3 });
-  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.02, 24), headMat);
-  collar.position.y = h + 0.02;
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.015, 0.02, 24), headMat);
+  collar.position.y = h + 0.01;
   g.add(collar);
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.025, 12), headMat);
-  stem.position.y = h + 0.04;
+  stem.position.y = h + 0.032;
   g.add(stem);
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.014, 0.03), headMat);
-  head.position.set(0, h + 0.055, 0.006);
+  head.position.set(0, h + 0.048, 0.006);
   g.add(head);
   const nozzle = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.008, 0.024), headMat);
-  nozzle.position.set(0, h + 0.056, 0.032);
+  nozzle.position.set(0, h + 0.049, 0.032);
   g.add(nozzle);
+  return g;
+}
+
+// Small wrap band (for tiny cosmetics) — brand + name in a strip.
+function bandLabel(def, circ, height) {
+  const W = 1024, H = Math.max(80, Math.round((height / circ) * W));
+  const L = new Label(W, H).fill(def.style === 'select' ? def.band : def.bg);
+  const fw = W * 0.4, x = W / 2 - fw / 2;
+  L.text(def.brand, W / 2, H * 0.24, { size: H * 0.16, color: def.style === 'select' ? '#ffffff' : def.fg, maxW: fw * 0.95, font: FONTS.gothic });
+  L.text(def.title, W / 2, H * 0.56, { size: H * 0.24, color: def.style === 'select' ? '#ffffff' : def.fg, maxW: fw, font: FONTS.round });
+  if (def.sub) L.text(def.sub, W / 2, H * 0.84, { size: H * 0.12, color: def.style === 'select' ? '#f2d675' : def.accent, maxW: fw * 0.9 });
+  L.rect(x - 8, 0, 3, H, def.accent + '88');
+  L.rect(x + fw + 5, 0, 3, H, def.accent + '88');
+  return L;
+}
+
+function lipstick(def) {
+  const g = new THREE.Group();
+  const r = 0.0105, h = 0.052;
+  const L = bandLabel(def, TAU * r, h * 0.6);
+  const caseMat = plain(def.bg, { metalness: 0.7, roughness: 0.25 });
+  const gold = plain('#d9b46a', { metalness: 0.9, roughness: 0.25 });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 28, 1, true, Math.PI), L.material({ metalness: 0.5, roughness: 0.3 }));
+  base.position.y = h / 2;
+  g.add(base);
+  const bottom = new THREE.Mesh(new THREE.CircleGeometry(r, 24), caseMat);
+  bottom.rotation.x = Math.PI / 2;
+  g.add(bottom);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.02, r * 1.02, 0.006, 28), gold);
+  ring.position.y = h + 0.003;
+  g.add(ring);
+  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.8, r * 0.8, 0.012, 24), gold);
+  sleeve.position.y = h + 0.012;
+  g.add(sleeve);
+  // the bullet, cut at an angle
+  const bullet = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.66, r * 0.66, 0.024, 24), plain(def.shade, { roughness: 0.25 }));
+  bullet.position.y = h + 0.03;
+  g.add(bullet);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(r * 0.66, 20, 12, 0, TAU, 0, Math.PI / 2), plain(def.shade, { roughness: 0.25 }));
+  tip.scale.set(1, 1.3, 1);
+  tip.rotation.z = 0.5;
+  tip.position.y = h + 0.042;
+  g.add(tip);
+  return g;
+}
+
+function wand(def) {
+  const g = new THREE.Group();
+  const r = def.slim ? 0.0065 : 0.0085, h = def.slim ? 0.13 : 0.12;
+  const L = bandLabel(def, TAU * r, h * 0.55);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h * 0.55, 24, 1, true, Math.PI), L.material({ roughness: 0.3, metalness: 0.3 }));
+  body.position.y = h * 0.275;
+  g.add(body);
+  const capMat = plain(def.style === 'select' ? def.band : def.bg, { roughness: 0.25, metalness: 0.4 });
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.96, r, h * 0.45, 24), capMat);
+  cap.position.y = h * 0.55 + h * 0.225;
+  g.add(cap);
+  const end = new THREE.Mesh(new THREE.SphereGeometry(r * 0.96, 16, 8, 0, TAU, 0, Math.PI / 2), capMat);
+  end.position.y = h;
+  g.add(end);
+  const foot = new THREE.Mesh(new THREE.CircleGeometry(r, 20), capMat);
+  foot.rotation.x = Math.PI / 2;
+  g.add(foot);
+  return g;
+}
+
+function polish(def) {
+  const g = new THREE.Group();
+  const w = 0.034, d = 0.024, h = 0.036, r = 0.008;
+  const glass = new THREE.Mesh(roundedPrism(w, d, h, r, { rows: 2 }), new THREE.MeshPhysicalMaterial({ color: def.shade, roughness: 0.05, clearcoat: 1, metalness: 0.1 }));
+  g.add(glass);
+  g.add(new THREE.Mesh(roundedCap(w, d, r, h, 1), glass.material));
+  // a printed band that wraps the rounded glass
+  const perim = 2 * (w + d) - 8 * r + 2 * Math.PI * r;
+  const band = new THREE.Mesh(roundedPrism(w + 0.0012, d + 0.0012, 0.016, r + 0.0006, { rows: 1 }), bandLabel(def, perim, 0.016).material({ roughness: 0.3 }));
+  band.position.y = 0.008;
+  g.add(band);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.009, 0.04, 20), plain('#1d1d22', { roughness: 0.2, metalness: 0.3 }));
+  cap.position.y = h + 0.02;
+  g.add(cap);
+  return g;
+}
+
+function compact(def) {
+  const g = new THREE.Group();
+  const r = 0.036, h = 0.016;
+  const side = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 40), plain(def.style === 'select' ? def.band : '#d9b46a', { metalness: 0.85, roughness: 0.25 }));
+  side.position.y = h / 2;
+  g.add(side);
+  const lid = new THREE.Mesh(new THREE.CircleGeometry(r * 0.96, 40), lidLabel(def).material({ roughness: 0.3, metalness: 0.2 }));
+  lid.rotation.x = -Math.PI / 2;
+  lid.position.y = h + 0.0006;
+  g.add(lid);
+  return g;
+}
+
+function jar(def) {
+  const g = new THREE.Group();
+  const r = 0.033, h = 0.034;
+  const L = bandLabel(def, TAU * r, h);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 36, 1, true, Math.PI), L.material({ roughness: 0.35 }));
+  body.position.y = h / 2;
+  g.add(body);
+  const lidSide = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.03, r * 1.03, 0.014, 36), plain(def.accent, { metalness: 0.7, roughness: 0.3 }));
+  lidSide.position.y = h + 0.007;
+  g.add(lidSide);
+  const top = new THREE.Mesh(new THREE.CircleGeometry(r * 1.03, 36), lidLabel(def).material({ roughness: 0.35 }));
+  top.rotation.x = -Math.PI / 2;
+  top.position.y = h + 0.0145;
+  g.add(top);
+  return g;
+}
+
+function dropper(def) {
+  const g = new THREE.Group();
+  const r = 0.019, h = 0.075;
+  const prof = [[0, 0], [0.016, 0], [0.019, 0.004], [0.019, 0.062], [0.014, 0.072], [0.009, 0.075]].map(([x, y]) => new THREE.Vector2(x, y));
+  const glass = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), new THREE.MeshPhysicalMaterial({ color: def.liquid, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.9 }));
+  g.add(glass);
+  const L = wrapLabel(def, TAU * r, 0.045);
+  const label = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.0005, r + 0.0005, 0.045, 32, 1, true, Math.PI), L.material({ roughness: 0.3 }));
+  label.position.y = 0.008 + 0.0225;
+  g.add(label);
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.012, 20), plain('#d9b46a', { metalness: 0.9, roughness: 0.25 }));
+  collar.position.y = h + 0.006;
+  g.add(collar);
+  const bulb = new THREE.Mesh(new THREE.CapsuleGeometry(0.009, 0.018, 6, 16), plain('#2b2b30', { roughness: 0.6 }));
+  bulb.position.y = h + 0.03;
+  g.add(bulb);
+  return g;
+}
+
+function spray(def) {
+  const g = new THREE.Group();
+  const r = 0.024, h = 0.15;
+  const L = wrapLabel(def, TAU * r, h);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 36, 1, true, Math.PI), L.material({ metalness: 0.45, roughness: 0.3 }));
+  body.position.y = h / 2;
+  g.add(body);
+  const metal = plain('#d5d9de', { metalness: 0.9, roughness: 0.28 });
+  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(r, 28, 10, 0, TAU, 0, Math.PI / 2), metal);
+  shoulder.scale.y = 0.45;
+  shoulder.position.y = h;
+  g.add(shoulder);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.92, r * 0.92, 0.035, 28), plain(def.accent, { roughness: 0.3 }));
+  cap.position.y = h + 0.024;
+  g.add(cap);
+  const foot = new THREE.Mesh(new THREE.CircleGeometry(r, 28), metal);
+  foot.rotation.x = Math.PI / 2;
+  g.add(foot);
+  return g;
+}
+
+// Stand-up spout pouch (refills, jelly drinks).
+function pouch(def) {
+  const g = new THREE.Group();
+  const [w, h, d] = def.small ? [0.09, 0.14, 0.03] : [0.12, 0.2, 0.045];
+  const foil = { roughness: 0.3, metalness: 0.2, bumpMap: crinkleMap(), bumpScale: 0.5 };
+  const front = flatLabel(def, w, h).material(foil);
+  const back = flatLabel(def, w, h, { back: true }).material(foil);
+  const side = plain(def.style === 'select' ? def.band : def.bg, foil);
+  const geo = pillow(w, h, d, 12, 14);
+  // flat-bottomed: widen the base so it stands up
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i) / (h / 2);
+    if (y < -0.6) p.setZ(i, Math.sign(p.getZ(i) || 1) * (d / 2) * (0.6 + 0.4 * Math.min(1, (-0.6 - y) * 3)));
+  }
+  geo.computeVertexNormals();
+  const body = new THREE.Mesh(geo, [side, side, side, side, front, back]);
+  body.position.y = h / 2;
+  g.add(body);
+  const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.009, 0.018, 16), plain('#ffffff', { roughness: 0.4 }));
+  spout.position.set(def.small ? 0 : w * 0.28, h + 0.006, 0);
+  g.add(spout);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.016, 16), plain(def.accent, { roughness: 0.4 }));
+  cap.position.set(spout.position.x, h + 0.022, 0);
+  g.add(cap);
   return g;
 }
 
@@ -773,6 +993,12 @@ function card(def) {
     const plug = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.018, 0.005), plain('#d5d9de', { metalness: 0.9, roughness: 0.3 }));
     plug.position.y = 0.05;
     item.add(plug);
+  } else if (def.item === 'ties') {
+    for (let i = 0; i < 6; i++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.003, 8, 24), i % 2 ? im : plain('#c8a0b0'));
+      ring.position.set(((i % 2) - 0.5) * 0.03, 0.04 - Math.floor(i / 2) * 0.035, 0);
+      item.add(ring);
+    }
   } else if (def.item === 'pen') {
     for (const dx of [-0.01, 0.01]) {
       const pen = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.12, 12), dx < 0 ? im : plain('#c4302b'));
@@ -877,7 +1103,7 @@ function umbrella(def) {
 }
 
 const BUILDERS = {
-  bottle, tube, pump, card, magazine, umbrella,
+  bottle, tube, pump, card, magazine, umbrella, lipstick, wand, polish, compact, jar, dropper, spray, pouch,
   pet, can, carton, onigiri, sandwich, bento, bag, box, cup, tray, dessert,
   icecup: (d) => cup(d, { rt: 0.043, rb: 0.036, h: 0.058 }),
 };
@@ -927,6 +1153,8 @@ export class ShelfStocker {
         im.instanceMatrix.needsUpdate = true;
         im.computeBoundingSphere();
         im.renderOrder = part.renderOrder;
+        im.castShadow = !part.material.transparent;
+        im.receiveShadow = true;
         im.userData.productId = id;
         im.userData.noHit = part.userData.noHit;
         im.userData.local = part.matrixWorld.clone();
