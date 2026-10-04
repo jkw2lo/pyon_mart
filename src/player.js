@@ -56,8 +56,10 @@ export class Player {
   }
 
   look(dx, dy) {
-    this.yaw -= dx * 0.0035;
-    this.pitch = THREE.MathUtils.clamp(this.pitch - dy * 0.0035, -1.3, 1.3);
+    // invert = "grab the world" like Street View; default follows the mouse like a game
+    const s = 0.0035 * (this.lookScale ?? 1) * (this.invert ? -1 : 1);
+    this.yaw -= dx * s;
+    this.pitch = THREE.MathUtils.clamp(this.pitch - dy * s, -1.3, 1.3);
   }
 
   update(dt) {

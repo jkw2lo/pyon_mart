@@ -33,8 +33,9 @@ function keyed(keys, t) {
 
 // The hare. (cx, cy) = moon centre, R = moon radius. `at` is the angle of the
 // middle of the body; the hare runs clockwise (left → right over the top).
-export function hare(cx, cy, R, color, { at = 96, eye = '#ffffff', span = 84, gap = 0.06 } = {}) {
+export function hare(cx, cy, R, color, { at = 96, eye = '#ffffff', span = 84, gap = 0.06, thick = 1 } = {}) {
   const u = R / 60;
+  const T = thick;
   const back = at + span / 2, front = at - span / 2;   // angles (deg)
   const Ro = R + 31 * u;                               // the back line: a perfect arc
   const belly = [[0, 22], [0.18, 20], [0.52, 12], [0.8, 15.5], [1, 13.5]];
@@ -47,20 +48,20 @@ export function hare(cx, cy, R, color, { at = 96, eye = '#ffffff', span = 84, ga
   }
   for (let i = N; i >= 0; i--) {
     const t = i / N, a = back + (front - back) * t;
-    pts.push(polar(cx, cy, a, Ro - keyed(belly, t) * u));
+    pts.push(polar(cx, cy, a, Ro - keyed(belly, t) * u * T));
   }
   const body = 'M' + pts.map(([x, y]) => `${f(x)} ${f(y)}`).join(' L') + ' Z';
-  const [hx, hy] = polar(cx, cy, back - 3, Ro - 10.5 * u);    // haunch
+  const [hx, hy] = polar(cx, cy, back - 3, Ro - 10.5 * u * T);    // haunch
   const [nx, ny] = polar(cx, cy, front + 1, Ro - 6.5 * u);    // neck
   const [kx, ky] = polar(cx, cy, front - 6.5, Ro - 4 * u);     // head
   const [ex, ey] = polar(cx, cy, front - 9.5, Ro - 2 * u);     // eye
   const [tx, ty] = polar(cx, cy, back + 4, Ro - 3 * u);        // tail
   const headRot = -(front - 6.5) + 90 + 14;
   const g0 = R * (1 + gap);                                     // the feet's track, just above the moon
-  const sw = (n) => f(n * u);
+  const sw = (n) => f(n * u * (1 + (T - 1) * 0.6));
   return `<g fill="${color}" stroke="${color}" stroke-linecap="round" stroke-linejoin="round">
     <path d="${body}" stroke="none"/>
-    <circle cx="${f(hx)}" cy="${f(hy)}" r="${sw(11)}" stroke="none"/>
+    <circle cx="${f(hx)}" cy="${f(hy)}" r="${f(11 * u * T)}" stroke="none"/>
     <circle cx="${f(nx)}" cy="${f(ny)}" r="${sw(7)}" stroke="none"/>
     <ellipse cx="${f(kx)}" cy="${f(ky)}" rx="${sw(9.6)}" ry="${sw(7.4)}" transform="rotate(${f(headRot)} ${f(kx)} ${f(ky)})" stroke="none"/>
     <circle cx="${f(tx)}" cy="${f(ty)}" r="${sw(4.6)}" stroke="none"/>
@@ -78,56 +79,88 @@ export function hare(cx, cy, R, color, { at = 96, eye = '#ffffff', span = 84, ga
 // --- marks -------------------------------------------------------------------
 
 // On light backgrounds: tinted moon, slate-grey hare.
-export function logoRim({ size = 240 } = {}) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="${size}" height="${size}">
-    <circle cx="120" cy="146" r="64" fill="${PALETTE.moonTint}"/>
-    ${hare(120, 146, 64, PALETTE.bunny, { eye: PALETTE.moonTint })}
-  </svg>`;
-}
 
 // The sign badge: rounded square, night sky, white moon, pale hare.
-export function logoBadge({ size = 240 } = {}) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="${size}" height="${size}">
-    <defs><clipPath id="pb"><rect x="6" y="6" width="228" height="228" rx="52"/></clipPath></defs>
-    <g clip-path="url(#pb)">
-      <rect x="0" y="0" width="240" height="240" fill="${PALETTE.slate}"/>
-      <circle cx="120" cy="164" r="64" fill="${PALETTE.moon}"/>
-      ${hare(120, 164, 64, PALETTE.bunnyLight, { eye: PALETTE.slate })}
-      <rect x="0" y="194" width="240" height="46" fill="${PALETTE.slate}"/>
-      <rect x="0" y="194" width="240" height="9" fill="${PALETTE.gold}"/>
-    </g>
-  </svg>`;
-}
 
-// Round coin version (app icon / stickers).
-export function logoRing({ size = 240 } = {}) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="${size}" height="${size}">
-    <circle cx="120" cy="120" r="114" fill="${PALETTE.slate}"/>
-    <circle cx="120" cy="140" r="56" fill="${PALETTE.moon}"/>
-    ${hare(120, 140, 56, PALETTE.bunnyLight, { eye: PALETTE.slate })}
-  </svg>`;
-}
 
-// One-colour version, for packaging and stamps.
-export function logoMono({ size = 240, color = PALETTE.slate } = {}) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="${size}" height="${size}">
-    <circle cx="120" cy="146" r="64" fill="none" stroke="${color}" stroke-width="5"/>
-    ${hare(120, 146, 64, color, { eye: '#ffffff', gap: 0.1 })}
-  </svg>`;
-}
 
 // Horizontal lockup.
+
+
+
+// --- v3: the circular mark ------------------------------------------------------
+// The hare lives inside the moon, so the mark is a single clean circle. A tapered
+// gold arc trails behind it around half the moon — the line of its leap.
+
+// Tapered arc from angle a0 (thick) to a1 (thin), sitting outside radius r.
+export function trail(cx, cy, r, a0, a1, w, color) {
+  const N = 48, out = [], inn = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, a = a0 + (a1 - a0) * t;
+    const k = Math.pow(1 - t, 0.85);           // taper
+    out.push(polar(cx, cy, a, r + w * k));
+    inn.push(polar(cx, cy, a, r));
+  }
+  const pts = out.concat(inn.reverse());
+  return `<path d="M${pts.map(([x, y]) => `${f(x)} ${f(y)}`).join(' L')} Z" fill="${color}"/>`;
+}
+
+
+
+
+
+function craters(cx, cy, R, col = '#eef0f4') {
+  return `<circle cx="${f(cx - R * 0.34)}" cy="${f(cy + R * 0.42)}" r="${f(R * 0.15)}" fill="${col}"/>
+    <circle cx="${f(cx + R * 0.16)}" cy="${f(cy + R * 0.58)}" r="${f(R * 0.09)}" fill="${col}"/>
+    <circle cx="${f(cx + R * 0.42)}" cy="${f(cy + R * 0.3)}" r="${f(R * 0.06)}" fill="${col}"/>`;
+}
+
+
+// ============================================================================
+// Official mark (v3). Use these everywhere.
+// ============================================================================
+
+// The moon-and-hare roundel as an SVG group, centred at (cx, cy) with moon radius R.
+export function roundel(cx, cy, R, { moon = PALETTE.moon, hareCol = PALETTE.bunny, gold = PALETTE.gold, crater = '#eef0f4', eye } = {}) {
+  return `${`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${moon}"/>`}
+    ${crater ? craters(cx, cy, R, crater) : ''}
+    ${hare(cx, cy + R * 0.16, R * 0.53, hareCol, { gap: 0, span: 100, at: 90, eye: eye ?? moon, thick: 1.3 })}
+    ${trail(cx, cy, R + R * 0.075, 152, 335, R * 0.11, gold)}`;
+}
+
+// Primary mark: slate disc with a slim margin.
+export function logoBadge({ size = 240 } = {}) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="${size}" height="${size}">
+    <circle cx="120" cy="120" r="118" fill="${PALETTE.slate}"/>
+    ${roundel(120, 121, 92)}
+  </svg>`;
+}
+
+// On light backgrounds: the moon gets a soft tint so it holds its shape.
+export function logoRim({ size = 240 } = {}) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="${size}" height="${size}">
+    ${roundel(120, 121, 100, { moon: PALETTE.moonTint, crater: '#e2e5ea' })}
+  </svg>`;
+}
+
+// Small white roundel for packaging bands (hare in the band colour).
+export function bandMark(band) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+    ${roundel(120, 121, 100, { moon: '#ffffff', hareCol: band, crater: 'rgba(0,0,0,0.05)' })}
+  </svg>`;
+}
+
 export function logoLockup({ width = 720, dark = false } = {}) {
   const ink = dark ? '#ffffff' : PALETTE.ink;
   const sub = dark ? PALETTE.bunnyLight : PALETTE.bunny;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 240" width="${width}" height="${width * 240 / 780}">
-    <g transform="translate(6,0)">${dark ? `<circle cx="120" cy="146" r="60" fill="#fff"/>${hare(120, 146, 60, PALETTE.bunnyLight, { eye: PALETTE.slate })}` : `<circle cx="120" cy="146" r="64" fill="${PALETTE.moonTint}"/>${hare(120, 146, 64, PALETTE.bunny, { eye: PALETTE.moonTint })}`}</g>
-    <text x="262" y="138" font-family="'M PLUS Rounded 1c','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif"
+    ${dark ? roundel(122, 120, 92) : roundel(122, 120, 92, { moon: PALETTE.moonTint, crater: '#e2e5ea' })}
+    <text x="262" y="132" font-family="'M PLUS Rounded 1c','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif"
       font-weight="800" font-size="86" letter-spacing="1" fill="${ink}">PYON MART</text>
-    <rect x="266" y="160" width="40" height="6" rx="3" fill="${PALETTE.gold}"/>
-    <text x="318" y="178" font-family="'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif"
+    <rect x="266" y="156" width="40" height="6" rx="3" fill="${PALETTE.gold}"/>
+    <text x="318" y="174" font-family="'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif"
       font-weight="700" font-size="32" letter-spacing="9" fill="${sub}">ぴょんマート</text>
   </svg>`;
 }
 
-export const VARIANTS = { rim: logoRim, badge: logoBadge, ring: logoRing, mono: logoMono };
+export const VARIANTS = { badge: logoBadge, rim: logoRim };

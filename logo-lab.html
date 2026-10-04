@@ -16,13 +16,14 @@
   <div class="row" id="marks"></div>
   <div class="row" id="lockups"></div>
   <script type="module">
-    import { VARIANTS, logoLockup } from './src/logo.js';
+    import { VARIANTS, logoLockup, bandMark } from './src/logo.js';
     document.getElementById('hero').innerHTML =
-      `<div class="card">${VARIANTS.badge({ size: 380 })}</div><div class="card">${VARIANTS.rim({ size: 380 })}</div>`;
+      `<div class="card">${VARIANTS.badge({ size: 340 })}</div><div class="card">${VARIANTS.rim({ size: 340 })}</div>`;
     const marks = document.getElementById('marks');
     for (const [name, fn] of Object.entries(VARIANTS)) {
-      marks.insertAdjacentHTML('beforeend', `<div class="card">${fn({ size: 150 })}<div>${name} ${fn({ size: 40 })} ${fn({ size: 20 })}</div></div>`);
+      marks.insertAdjacentHTML('beforeend', `<div class="card">${fn({ size: 120 })}<div>${name} ${fn({ size: 40 })} ${fn({ size: 20 })}</div></div>`);
     }
+    for (const b of ['#2b3140', '#6b4a2e', '#c86a7e']) marks.insertAdjacentHTML('beforeend', `<div class="card" style="background:${b}">${bandMark(b).replace('width="240" height="240"', 'width="90" height="90"')}</div>`);
     const l = document.getElementById('lockups');
     l.insertAdjacentHTML('beforeend', `<div class="card">${logoLockup({ width: 520 })}</div>`);
     l.insertAdjacentHTML('beforeend', `<div class="card dark">${logoLockup({ width: 520, dark: true })}</div>`);

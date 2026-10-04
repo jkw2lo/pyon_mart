@@ -18,8 +18,23 @@
       <button id="words-btn" class="pill" title="Word book (J)"><span class="jp">言葉</span> <b id="word-count">0</b>/<span id="word-total">0</span></button>
     </div>
     <div class="hud-tr">
-      <div class="pill"><span class="jp">かご</span> <b id="basket-count">0</b> · ¥<b id="basket-total">0</b></div>
+      <button id="basket-btn" class="pill" title="Your basket"><span class="jp">かご</span> <b id="basket-count">0</b> · ¥<b id="basket-total">0</b></button>
+      <button id="settings-btn" class="pill icon" title="Settings">⚙</button>
     </div>
+    <div id="basket-panel" class="popover hidden">
+      <div class="pop-head"><b class="jp">かご</b> <small>your basket</small></div>
+      <div id="basket-list"></div>
+      <div class="pop-foot">Take it to the <span class="jp">レジ</span> (register) to check out.</div>
+    </div>
+    <div id="settings-panel" class="popover hidden">
+      <div class="pop-head"><b>Settings</b></div>
+      <label class="row">Look speed <input id="set-sens" type="range" min="0.4" max="2" step="0.05" value="1"></label>
+      <label class="row">Drag to look like Street View <input id="set-invert" type="checkbox"></label>
+      <label class="row">Volume <input id="set-vol" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+      <label class="row">Show tips <input id="set-tips" type="checkbox" checked></label>
+      <button id="reset-words" class="link">Reset word book</button>
+    </div>
+    <div id="tip-banner" class="hidden"></div>
     <div id="hint"></div>
     <div class="hud-bottom">
       <span id="time-icon">☀</span>
@@ -53,6 +68,22 @@
         <button id="btn-back">Put back <kbd>Esc</kbd></button>
       </div>
       <div class="ip-help">Drag or use <kbd>A</kbd><kbd>D</kbd> to turn · scroll to zoom · hover any Japanese text for its reading</div>
+    </div>
+  </div>
+
+  <div id="checkout" class="hidden">
+    <div class="co-inner">
+      <div class="co-left">
+        <div class="co-clerk"><div class="co-avatar"></div><div><b>ぴょんさん</b><small>Pyon-san · clerk</small></div></div>
+        <div id="co-say" class="co-bubble"></div>
+        <div id="co-answers" class="co-answers"></div>
+      </div>
+      <div class="co-receipt">
+        <div class="r-head"><div id="r-logo"></div><div class="jp">ぴょんマート</div><small>PYON MART · 月見通り店</small></div>
+        <div id="r-items"></div>
+        <div id="r-total"></div>
+        <div class="r-foot"></div>
+      </div>
     </div>
   </div>
 

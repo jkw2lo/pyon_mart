@@ -52,9 +52,9 @@ function selectBand(L, def, x, y, w, bh) {
   L.rect(x, y + bh, w, Math.max(2, bh * 0.07), '#f2d675');
   const mh = bh * 0.8;
   const tw = Math.min(w * 0.62, bh * 3.2);
-  const total = mh * 1.1 + tw;
+  const total = mh * 1.15 + tw;
   const mx = x + (w - total) / 2;
-  drawMark(L.ctx, mx, y + bh * 0.1, mh, 'white');
+  drawMark(L.ctx, mx, y + bh * 0.1, mh, def.band);
   L.text(def.brand, mx + mh * 1.15, y + bh * 0.53, { size: bh * 0.44, color: '#fff', font: FONTS.round, align: 'left', maxW: tw });
 }
 
@@ -634,7 +634,7 @@ function dessert(def) {
   B.rect(0, 0, B.w, B.h, def.bg);
   B.rect(0, 0, B.w, 40, def.band);
   B.rect(0, 40, B.w, 4, '#f2d675');
-  drawMark(B.ctx, 512 - 120, 4, 32, 'white');
+  drawMark(B.ctx, 512 - 120, 4, 32, def.band);
   B.text(def.brand, 512 + 10, 21, { size: 24, color: '#fff', font: FONTS.round, maxW: 200 });
   B.text(def.title, 512, 92, { size: 56, color: def.fg, font: FONTS.round, maxW: 330 });
   if (def.sub) B.text(def.sub, 512, 134, { size: 20, color: '#555', maxW: 300 });
@@ -644,7 +644,240 @@ function dessert(def) {
   return g;
 }
 
+
+// Small skincare bottle with a shoulder and a tall cap.
+function bottle(def) {
+  const g = new THREE.Group();
+  const r = 0.026, h = 0.13;
+  const prof = [[0, 0], [0.022, 0], [0.026, 0.004], [0.026, 0.105], [0.022, 0.118], [0.011, 0.124], [0.011, 0.13]].map(([x, y]) => new THREE.Vector2(x, y));
+  const glass = new THREE.Mesh(new THREE.LatheGeometry(prof, 36), new THREE.MeshPhysicalMaterial({ color: def.liquid || '#ffffff', roughness: 0.08, transmission: 0, transparent: true, opacity: 0.85, clearcoat: 1 }));
+  g.add(glass);
+  const lh = 0.07;
+  const L = wrapLabel(def, TAU * r, lh);
+  const label = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.0006, r + 0.0006, lh, 40, 1, true, Math.PI), L.material({ roughness: 0.3 }));
+  label.position.y = 0.014 + lh / 2;
+  g.add(label);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.0145, 0.045, 28), plain(def.style === 'select' ? def.band : def.fg, { roughness: 0.25, metalness: 0.4 }));
+  cap.position.y = h + 0.0225;
+  g.add(cap);
+  return g;
+}
+
+// Squeeze tube standing on its cap, flattening toward the crimped end.
+function tube(def) {
+  const g = new THREE.Group();
+  const h = def.small ? 0.1 : 0.15, r = def.small ? 0.017 : 0.022;
+  const geo = new THREE.CylinderGeometry(r, r, h, 40, 12, true, Math.PI);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const t = Math.min(1, Math.max(0, (p.getY(i) + h / 2) / h));   // 0 at cap, 1 at crimp
+    const flat = 1 - 0.85 * Math.pow(t, 1.6);
+    p.setZ(i, p.getZ(i) * flat);
+    p.setX(i, p.getX(i) * (1 + 0.25 * t));
+  }
+  geo.computeVertexNormals();
+  const L = wrapLabel(def, TAU * r, h);
+  const body = new THREE.Mesh(geo, L.material({ roughness: 0.35, side: THREE.DoubleSide }));
+  body.position.y = 0.018 + h / 2;
+  g.add(body);
+  const crimp = new THREE.Mesh(new THREE.BoxGeometry(r * 2.6, 0.008, 0.004), plain(def.style === 'select' ? def.band : def.bg));
+  crimp.position.y = 0.018 + h + 0.003;
+  g.add(crimp);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.75, r * 0.85, 0.018, 24), plain(def.style === 'select' ? def.band : def.fg, { roughness: 0.3 }));
+  cap.position.y = 0.009;
+  g.add(cap);
+  return g;
+}
+
+// Pump bottle: rounded-rect body, collar, pump head and nozzle.
+function pump(def) {
+  const g = new THREE.Group();
+  const w = 0.078, d = 0.052, h = 0.17;
+  const sh = new THREE.Shape();
+  sh.absarc(-w / 2 + 0.018, 0, 0.018, Math.PI / 2, (3 * Math.PI) / 2);
+  sh.absarc(w / 2 - 0.018, 0, 0.018, -Math.PI / 2, Math.PI / 2);
+  // squash to the bottle's depth
+  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: true, bevelSize: 0.004, bevelThickness: 0.006, bevelSegments: 3, curveSegments: 12 }), plain(def.bg, { roughness: 0.25, metalness: 0.05 }));
+  body.rotation.x = -Math.PI / 2;
+  body.scale.set(1, d / 0.036, 1);
+  body.position.y = 0.006;
+  g.add(body);
+  const lw = w * 0.86, lh = h * 0.72;
+  const L = flatLabel(def, lw, lh);
+  const label = new THREE.Mesh(new THREE.PlaneGeometry(lw, lh), L.material({ roughness: 0.3 }));
+  const fz = (0.018 + 0.004) * (d / 0.036) + 0.0015;   // just proud of the bevelled front
+  label.position.set(0, 0.006 + h * 0.48, fz);
+  g.add(label);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(lw, lh), flatLabel(def, lw, lh, { back: true }).material({ roughness: 0.35 }));
+  back.position.set(0, 0.006 + h * 0.48, -fz);
+  back.rotation.y = Math.PI;
+  g.add(back);
+  const headMat = plain(def.style === 'select' ? def.band : def.fg, { roughness: 0.3 });
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.02, 24), headMat);
+  collar.position.y = h + 0.02;
+  g.add(collar);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.025, 12), headMat);
+  stem.position.y = h + 0.04;
+  g.add(stem);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.014, 0.03), headMat);
+  head.position.set(0, h + 0.055, 0.006);
+  g.add(head);
+  const nozzle = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.008, 0.024), headMat);
+  nozzle.position.set(0, h + 0.056, 0.032);
+  g.add(nozzle);
+  return g;
+}
+
+// Blister card: printed backing card with the item under a clear bubble.
+function card(def) {
+  const g = new THREE.Group();
+  const w = def.big ? 0.11 : 0.08, h = def.big ? 0.2 : 0.17, t = 0.003;
+  const F = new Label(320, Math.round((320 * h) / w));
+  F.rect(0, 0, F.w, F.h, def.bg);
+  const bh = F.h * 0.13;
+  if (def.style === 'select') selectBand(F, def, 0, bh * 0.6, F.w, bh);
+  F.circle(F.w / 2, bh * 0.3, bh * 0.16, '#d8d8d8');                 // peg hole
+  F.rect(F.w * 0.12, F.h * 0.22, F.w * 0.76, F.h * 0.52, def.accent + '33', 14);
+  F.text(def.title, F.w / 2, F.h * 0.83, { size: F.h * 0.08, color: def.fg, font: FONTS.round, maxW: F.w * 0.88 });
+  if (def.sub) F.text(def.sub, F.w / 2, F.h * 0.92, { size: F.h * 0.045, color: '#555', maxW: F.w * 0.8 });
+  const front = F.material({ roughness: 0.45 });
+  const back = flatLabel(def, w, h, { back: true }).material({ roughness: 0.5 });
+  const side = plain(def.band || def.bg);
+  const cardMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, t), [side, side, side, side, front, back]);
+  cardMesh.position.y = h / 2;
+  g.add(cardMesh);
+  const im = plain(def.itemColor, { roughness: 0.35 });
+  const item = new THREE.Group();
+  if (def.item === 'stick') {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0085, 0.065, 20), im);
+    c.rotation.z = 0.15;
+    item.add(c);
+  } else if (def.item === 'brush') {
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.12, 0.006), im);
+    item.add(handle);
+    const bristles = new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.025, 0.012), plain('#ffffff'));
+    bristles.position.set(0, 0.05, 0.008);
+    item.add(bristles);
+  } else if (def.item === 'socks') {
+    for (const dx of [-0.018, 0.018]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.1, 0.01), im);
+      leg.position.set(dx, 0.01, 0);
+      item.add(leg);
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.01), im);
+      foot.position.set(dx + 0.006, -0.05, 0);
+      item.add(foot);
+    }
+  } else if (def.item === 'cable') {
+    const curve = new THREE.CatmullRomCurve3(Array.from({ length: 30 }, (_, i) => new THREE.Vector3(Math.cos(i * 0.7) * 0.022, -0.04 + i * 0.0028, 0)));
+    item.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 0.0022, 6), im));
+    const plug = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.018, 0.005), plain('#d5d9de', { metalness: 0.9, roughness: 0.3 }));
+    plug.position.y = 0.05;
+    item.add(plug);
+  } else if (def.item === 'pen') {
+    for (const dx of [-0.01, 0.01]) {
+      const pen = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.12, 12), dx < 0 ? im : plain('#c4302b'));
+      pen.position.x = dx;
+      item.add(pen);
+    }
+  }
+  item.position.set(0, h * 0.48, t / 2 + 0.012);
+  g.add(item);
+  const bubble = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, h * 0.52, 0.022), clearPlastic());
+  bubble.position.set(0, h * 0.48, t / 2 + 0.011);
+  bubble.userData.noHit = true;
+  g.add(bubble);
+  return g;
+}
+
+// Magazine: printed cover with masthead, cover lines and a "photo".
+function coverArt(L, def, x, y, w, h) {
+  const c = L.ctx;
+  const g = c.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, def.accent + '55');
+  g.addColorStop(1, def.accent + 'cc');
+  c.fillStyle = g;
+  c.fillRect(x, y, w, h);
+  const cx = x + w * 0.55, cy = y + h * 0.55, s = Math.min(w, h);
+  if (def.cover === 'cat') {
+    c.fillStyle = '#f2a65a';
+    c.beginPath(); c.ellipse(cx, cy + s * 0.15, s * 0.3, s * 0.26, 0, 0, TAU); c.fill();
+    c.beginPath(); c.arc(cx, cy - s * 0.16, s * 0.2, 0, TAU); c.fill();
+    for (const dx of [-1, 1]) { c.beginPath(); c.moveTo(cx + dx * s * 0.17, cy - s * 0.26); c.lineTo(cx + dx * s * 0.08, cy - s * 0.42); c.lineTo(cx + dx * s * 0.02, cy - s * 0.3); c.fill(); }
+    c.fillStyle = '#2b3140';
+    for (const dx of [-1, 1]) { c.beginPath(); c.arc(cx + dx * s * 0.07, cy - s * 0.17, s * 0.022, 0, TAU); c.fill(); }
+  } else if (def.cover === 'car') {
+    c.fillStyle = '#c4302b';
+    c.beginPath(); c.roundRect(cx - s * 0.4, cy, s * 0.8, s * 0.16, s * 0.05); c.fill();
+    c.beginPath(); c.roundRect(cx - s * 0.22, cy - s * 0.12, s * 0.44, s * 0.16, s * 0.06); c.fill();
+    c.fillStyle = '#111';
+    for (const dx of [-0.24, 0.24]) { c.beginPath(); c.arc(cx + dx * s, cy + s * 0.17, s * 0.07, 0, TAU); c.fill(); }
+  } else if (def.cover === 'manga') {
+    c.fillStyle = '#ffffff';
+    for (let i = 0; i < 4; i++) c.fillRect(x + w * (0.08 + (i % 2) * 0.46), y + h * (0.08 + Math.floor(i / 2) * 0.46), w * 0.4, h * 0.4);
+    c.strokeStyle = '#1d2a4a'; c.lineWidth = 3;
+    for (let i = 0; i < 4; i++) c.strokeRect(x + w * (0.08 + (i % 2) * 0.46), y + h * (0.08 + Math.floor(i / 2) * 0.46), w * 0.4, h * 0.4);
+    drawArt(c, 'sparkle', x + w * 0.28, y + h * 0.28, s * 0.3, ['#c4302b']);
+    drawArt(c, 'gummy', x + w * 0.74, y + h * 0.74, s * 0.35, ['#9aa0a9', '#8a919c', '#c3c8d0']);
+  } else {
+    const kind = { food: 'bowl', travel: 'bubbles', fashion: 'sparkle', game: 'sticks' }[def.cover] || 'sparkle';
+    const cols = { food: ['#c4502b', '#f2d9a8'], travel: ['#ffffff'], fashion: ['#ffffff'], game: ['#e8ff3a'] }[def.cover] || ['#fff'];
+    drawArt(c, kind, cx, cy, s * 0.7, cols);
+  }
+}
+
+function magazine(def) {
+  const g = new THREE.Group();
+  const w = 0.21, h = 0.28, t = 0.008;
+  const L = new Label(512, Math.round((512 * h) / w));
+  L.rect(0, 0, L.w, L.h, def.bg);
+  coverArt(L, def, 0, L.h * 0.2, L.w, L.h * 0.7);
+  L.text(def.title, L.w / 2, L.h * 0.1, { size: L.h * 0.13, color: def.fg, font: FONTS.pop, maxW: L.w * 0.92, stroke: '#ffffff', strokeW: 10 });
+  L.text(def.brand, L.w * 0.12, L.h * 0.215, { size: L.h * 0.035, color: def.fg, align: 'left' });
+  L.rect(L.w * 0.06, L.h * 0.62, L.w * 0.42, L.h * 0.09, def.fg, 6);
+  L.text(def.sub, L.w * 0.27, L.h * 0.665, { size: L.h * 0.05, color: def.bg, maxW: L.w * 0.38 });
+  if (def.badge) {
+    L.circle(L.w * 0.82, L.h * 0.3, L.w * 0.11, def.accent);
+    L.text(def.badge, L.w * 0.82, L.h * 0.3, { size: L.w * 0.07, color: '#fff', maxW: L.w * 0.18 });
+  }
+  L.rect(0, L.h * 0.9, L.w, L.h * 0.1, '#ffffff');
+  const c = L.ctx;
+  c.fillStyle = '#111';
+  for (let i = 0; i < 30; i++) if ((i * 7) % 5 > 1) c.fillRect(L.w * 0.62 + i * 5, L.h * 0.915, 3, L.h * 0.06);
+  L.text(`¥${def.price}`, L.w * 0.15, L.h * 0.95, { size: L.h * 0.04, color: '#333' });
+  const cover = L.material({ roughness: 0.35 });
+  const pages = plain('#f6f3ec', { roughness: 0.9 });
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, t), [pages, plain(def.fg), pages, pages, cover, plain('#ffffff')]);
+  m.position.y = h / 2;
+  g.add(m);
+  return g;
+}
+
+// Clear plastic umbrella, folded, standing on its tip.
+function umbrella(def) {
+  const g = new THREE.Group();
+  const prof = [[0.0, 0.0], [0.006, 0.02], [0.03, 0.55], [0.022, 0.66], [0.004, 0.7]].map(([x, y]) => new THREE.Vector2(x, y));
+  const canopy = new THREE.Mesh(new THREE.LatheGeometry(prof, 8), new THREE.MeshStandardMaterial({ color: '#e8f4f8', roughness: 0.15, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  canopy.position.y = 0.05;
+  g.add(canopy);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.86, 8), plain('#d5d9de', { metalness: 0.8, roughness: 0.3 }));
+  shaft.position.y = 0.43;
+  g.add(shaft);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.008, 8, 16, Math.PI), plain('#ffffff', { roughness: 0.4 }));
+  handle.position.set(0.035, 0.86, 0);
+  g.add(handle);
+  // a little paper band with the price and the name — hoverable
+  const L = new Label(256, 96).fill('#ffffff');
+  L.rect(0, 0, 256, 26, '#2b3140');
+  L.text(def.title, 128, 58, { size: 30, color: '#2b3140', maxW: 230 });
+  L.text(`¥${def.price}`, 128, 13, { size: 18, color: '#fff' });
+  const tag = new THREE.Mesh(new THREE.CylinderGeometry(0.0255, 0.0255, 0.05, 20, 1, true, Math.PI), L.material());
+  tag.position.y = 0.42;
+  g.add(tag);
+  return g;
+}
+
 const BUILDERS = {
+  bottle, tube, pump, card, magazine, umbrella,
   pet, can, carton, onigiri, sandwich, bento, bag, box, cup, tray, dessert,
   icecup: (d) => cup(d, { rt: 0.043, rb: 0.036, h: 0.058 }),
 };

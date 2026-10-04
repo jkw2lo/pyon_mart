@@ -32,7 +32,7 @@ function priceTag(def) {
 // few facings (side-by-side copies), sized so the run looks full but varied.
 // start: front-left corner at shelf top, along: unit vector down the shelf,
 // inward: unit vector from the front edge toward the back.
-function stockRun(stocker, tagParent, ids, { start, along, inward, length, depth, rotY, gap = 0.008, rows = 2, tag = true, lie = false, tagY = -0.03, maxFacings = 4 }) {
+function stockRun(stocker, tagParent, ids, { start, along, inward, length, depth, rotY, gap = 0.008, rows = 2, tag = true, lie = false, tagY = -0.03, maxFacings = 4, tilt = 0 }) {
   const items = ids.map((id) => {
     const def = byId[id];
     const size = productTemplate(def).userData.size;
@@ -57,7 +57,7 @@ function stockRun(stocker, tagParent, ids, { start, along, inward, length, depth
       for (let r = 0; r < nd; r++) {
         const p = start.clone().addScaledVector(along, first + k * it.w).addScaledVector(inward, 0.015 + it.d / 2 + r * it.d);
         if (lie) p.y += it.size.z / 2;
-        stocker.add(it.def, p, rotY, lie ? -Math.PI / 2 : 0);
+        stocker.add(it.def, p, rotY, lie ? -Math.PI / 2 : tilt);
       }
     }
     if (tag) {
@@ -86,20 +86,6 @@ function hangingSign(parent, word, x, y, z, rotY, { w = 1.3, h = 0.36, bg = '#3a
   g.rotation.y = rotY;
   parent.add(g);
   return g;
-}
-
-function magazineCover(i) {
-  const titles = ['PYON WEEKLY', 'MOON', 'TOKYO WALK', 'CAMERA+', 'GAME DASH', 'KITCHEN', 'STYLE', 'MANGA JUMP'];
-  const cols = ['#e8423a', '#2a6ad0', '#f2c230', '#1d8a6a', '#7a3ac0', '#ff8a3a', '#d03a8a', '#3a4150'];
-  const t = canvasTex(128, 170, (c) => {
-    c.fillStyle = '#f4f2ee'; c.fillRect(0, 0, 128, 170);
-    c.fillStyle = cols[i % 8]; c.fillRect(0, 0, 128, 40);
-    c.fillStyle = '#fff'; c.font = '900 18px sans-serif'; c.textAlign = 'center'; c.fillText(titles[i % 8], 64, 27);
-    c.fillStyle = `hsl(${(i * 47) % 360},40%,60%)`; c.fillRect(10, 48, 108, 90);
-    c.fillStyle = `hsl(${(i * 47 + 180) % 360},50%,40%)`; c.beginPath(); c.arc(64, 100, 28, 0, 7); c.fill();
-    c.fillStyle = '#333'; for (let k = 0; k < 3; k++) c.fillRect(12, 144 + k * 8, 70 - k * 14, 4);
-  });
-  return std('#fff', { map: t, roughness: 0.4 });
 }
 
 export function buildInterior(scene, mats, colliders) {
@@ -237,8 +223,9 @@ export function buildInterior(scene, mats, colliders) {
       nx: [['cookie', 'biscuit', 'milkchoco', 'almondchoco', 'matchachoco', 'pyonstick', 'caramel'], ['pyonstick', 'matchachoco', 'almondchoco', 'milkchoco', 'cookie', 'biscuit', 'dango'], ['gummy', 'gummy-budo', 'nodoame', 'pyonstick', 'caramel', 'milkchoco', 'gummy'], ['dango', 'cookie', 'biscuit', 'matchachoco', 'almondchoco', 'dango']],
       px: [['senbei', 'kakinotane', 'chips-select', 'ebisen', 'popcorn', 'senbei'], ['milkchoco', 'almondchoco', 'pyonstick', 'caramel', 'matchachoco', 'cookie', 'biscuit'], ['nodoame', 'gummy', 'gummy-budo', 'caramel', 'pyonstick', 'milkchoco', 'almondchoco'], ['biscuit', 'cookie', 'dango', 'matchachoco', 'milkchoco', 'pyonstick']] },
     { x: 1.6, sign: w.nichiyohin,
-      nx: [['tissue', 'mask', 'bansoko', 'denchi', 'hamigaki', 'tissue', 'mask'], ['denchi', 'hamigaki', 'bansoko', 'tissue', 'mask', 'denchi'], ['mask', 'tissue', 'hamigaki', 'denchi', 'bansoko', 'mask', 'tissue'], ['hamigaki', 'bansoko', 'denchi', 'mask', 'tissue', 'hamigaki']],
-      px: [['yakisoba', 'shoyu', 'miso', 'seafood', 'tonkotsu', 'kitsune'], ['chips-select', 'kakinotane', 'popcorn', 'chips-norishio', 'senbei', 'ebisen'], ['pyonstick', 'gummy', 'cookie', 'almondchoco', 'caramel', 'nodoame', 'biscuit'], ['dango', 'matchachoco', 'milkchoco', 'gummy-budo', 'pyonstick', 'cookie']] },
+      // beauty & bath on the left side, everyday goods on the right
+      nx: [['shampoo', 'conditioner', 'bodysoap', 'shampoo'], ['keshosui', 'nyueki', 'keshosui-select', 'hiyakedome', 'keshosui'], ['sengan', 'handcream', 'hiyakedome', 'lipcream', 'handcream', 'sengan'], ['lipcream', 'menbo', 'haburashi', 'hamigaki', 'lipcream', 'menbo']],
+      px: [['tissue', 'mask', 'menbo', 'bansoko', 'tissue', 'mask'], ['kutsushita', 'cable', 'denchi', 'kutsushita', 'cable'], ['haburashi', 'hamigaki', 'note', 'ballpen', 'haburashi'], ['denchi', 'cable', 'ballpen', 'bansoko', 'denchi', 'note']] },
   ];
   const levels = [0.12, 0.5, 0.88, 1.26];
   const gDepth = 0.4;
@@ -263,6 +250,7 @@ export function buildInterior(scene, mats, colliders) {
     }
     colliders.add(G.x - 0.47, G.x + 0.47, gz0 - 0.03, gz1 + 0.36);
     hangingSign(g, G.sign, G.x, 2.3, 0.6, FACE.pz, { w: 1.2 });
+    if (G.x > 1) hangingSign(g, w.pyonBeauty, G.x - 0.5, 2.32, -1.3, FACE.nx, { w: 1.2, bg: '#8a7fae' });
   }
   // endcaps facing the entrance (promo: moon-viewing dumplings for October)
   const ez = gz1 + 0.17;
@@ -309,18 +297,19 @@ export function buildInterior(scene, mats, colliders) {
   const mx0 = -5.7, mx1 = -0.8;
   addBox(g, [mx1 - mx0, 0.45, 0.38], mats.shelfWhite, [(mx0 + mx1) / 2, 0.225, 4.72]);
   addBox(g, [mx1 - mx0, 1.15, 0.04], mats.shelfWhite, [(mx0 + mx1) / 2, 0.575, 4.9]);
-  let mi = 0;
-  for (const [y, z] of [[0.48, 4.66], [0.8, 4.76], [1.08, 4.84]]) {
+  const mags = [['mag-jump', 'mag-game', 'mag-kuruma', 'mag-jump', 'mag-neko'], ['mag-ryori', 'mag-fashion', 'mag-ryoko', 'mag-neko', 'mag-ryori'], ['mag-fashion', 'mag-ryoko', 'mag-game', 'mag-kuruma', 'mag-fashion']];
+  [[0.48, 4.66], [0.8, 4.76], [1.08, 4.84]].forEach(([y, z], i) => {
     addBox(g, [mx1 - mx0, 0.02, 0.14], mats.shelfEdge, [(mx0 + mx1) / 2, y - 0.02, z]);
-    for (let x = mx0 + 0.15; x < mx1 - 0.1; x += 0.24) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.28, 0.01), [mats.white, mats.white, mats.white, mats.white, magazineCover(mi++), mats.white]);
-      m.position.set(x, y + 0.13, z - 0.02);
-      m.rotation.x = -0.22;
-      g.add(m);
-    }
-  }
+    addBox(g, [mx1 - mx0, 0.05, 0.012], mats.shelfEdge, [(mx0 + mx1) / 2, y + 0.005, z - 0.07]);
+    // magazines face into the store and lean back against the rack
+    stockRun(stocker, tags, mags[i], {
+      start: V(mx1 - 0.05, y, z - 0.065), along: V(-1, 0, 0), inward: V(0, 0, 1), length: mx1 - mx0 - 0.1, depth: 0.05,
+      rotY: Math.PI, rows: 1, tilt: -0.24, maxFacings: 4, gap: 0.012, tagY: -0.035,
+    });
+  });
   const zs = sign(w.zasshi, { w: 0.6, h: 0.2, bg: '#3a4150', fg: '#fff', res: 256 });
-  zs.position.set(-3.2, 1.28, 4.875);
+  zs.position.set(-3.2, 1.42, 4.875);
+  zs.rotation.y = Math.PI;
   g.add(zs);
   colliders.add(mx0, mx1, 4.5, 5);
 
@@ -351,9 +340,13 @@ export function buildInterior(scene, mats, colliders) {
   addBox(g, [0.02, 0.14, kLen], mats.slate, [kx - 0.36, 0.8, kzc], { cast: false });
   addBox(g, [0.02, 0.025, kLen], std('#f2d675'), [kx - 0.36, 0.71, kzc], { cast: false });
   for (const z of [-0.4, 1.4]) {
-    addBox(g, [0.32, 0.1, 0.36], std('#2a2d33', { roughness: 0.4 }), [kx + 0.1, 1.04, z]);
-    addBox(g, [0.04, 0.24, 0.3], std('#1a1c20', { emissive: '#7ab8ff', emissiveIntensity: 0.6 }), [kx - 0.1, 1.2, z]);
-    addBox(g, [0.03, 0.12, 0.03], mats.darkMetal, [kx - 0.06, 1.05, z]);
+    const parts = [
+      addBox(g, [0.32, 0.1, 0.36], std('#2a2d33', { roughness: 0.4 }), [kx + 0.1, 1.04, z]),
+      addBox(g, [0.04, 0.24, 0.3], std('#1a1c20', { emissive: '#7ab8ff', emissiveIntensity: 0.6 }), [kx - 0.1, 1.2, z]),
+      addBox(g, [0.03, 0.12, 0.03], mats.darkMetal, [kx - 0.06, 1.05, z]),
+      addBox(g, [0.22, 0.03, 0.16], std('#c8ccd2', { metalness: 0.6, roughness: 0.3 }), [kx - 0.22, 1.0, z + 0.25]),
+    ];
+    for (const p of parts) p.userData.register = true;
   }
   // hot snack case
   addBox(g, [0.5, 0.05, 0.9], std('#2a2d33'), [kx, 1.015, -1.6]);
@@ -408,10 +401,28 @@ export function buildInterior(scene, mats, colliders) {
     }
   });
   const bw = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.0), std('#fff', { map: backWall }));
-  bw.position.set(5.99, 1.7, 0.5);
+  bw.position.set(5.99, 1.55, 0.5);
   bw.rotation.y = FACE.nx;
   g.add(bw);
   colliders.add(5.45, 6, -2.4, 3.0);
+
+  // umbrella stand by the door, stocked with clear umbrellas you can pick up
+  {
+    const ux = 1.55, uz = 4.5;
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.5, 24, 1, true), std('#9aa0a8', { metalness: 0.8, roughness: 0.35, side: THREE.DoubleSide }));
+    stand.position.set(ux, 0.25, uz);
+    g.add(stand);
+    addBox(g, [0.36, 0.02, 0.36], mats.darkMetal, [ux, 0.01, uz]);
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      stocker.add(byId.kasa, V(ux + Math.cos(a) * 0.08, 0.02, uz + Math.sin(a) * 0.08), a * 1.7, 0.08 + (i % 3) * 0.03);
+    }
+    const ks = sign(w.jumbo, { w: 0.42, h: 0.1, bg: '#2b3140', fg: '#fff', res: 256 });
+    ks.position.set(ux, 0.38, uz - 0.205);
+    ks.rotation.y = Math.PI;
+    g.add(ks);
+    colliders.rect(ux, uz, 0.44, 0.44);
+  }
 
   // welcome mat
   const mat = new Label(512, 320).fill('#3a3d42');

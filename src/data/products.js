@@ -10,6 +10,7 @@ import { words as w } from './words.js';
 const SEL = { style: 'select', brand: w.pyonSelect };
 const CAFE = { style: 'select', brand: w.pyonCafe, band: '#6b4a2e' };
 const SWEETS = { style: 'select', brand: w.pyonSweets, band: '#c86a7e' };
+const BEAUTY = { style: 'select', brand: w.pyonBeauty, band: '#8a7fae' };
 
 export const products = [
   // ===== Drinks: tea & water (PET) ============================================
@@ -187,6 +188,47 @@ export const products = [
     bg: '#ffffff', fg: '#1d8a6a', accent: '#3ac0a0', art: 'sparkle', artColors: ['#3ac0a0'], title: w.hamigaki, sub: w.shinHatsubai },
   { id: 'tissue', shape: 'box', cat: 'daily', price: 98, dims: [0.11, 0.07, 0.025], ...SEL, fg: '#5a7a9a', accent: '#c8dcef', art: 'drop', artColors: ['#c8dcef'], title: w.tissue, sub: w.nameraka },
   { id: 'bansoko', shape: 'box', cat: 'daily', price: 298, dims: [0.08, 0.11, 0.02], ...SEL, fg: '#c4302b', accent: '#f2c8a0', art: 'box', artColors: ['#f2c8a0', '#ffffff'], title: w.bansoko, sub: w.kokusan },
+  // ===== Beauty & skincare ======================================================
+  { id: 'keshosui', shape: 'bottle', cat: 'beauty', price: 880, note: '150ml', style: 'clean', brand: w.hanagasumi,
+    bg: '#fde8ee', fg: '#a3405a', accent: '#f2a6b8', liquid: '#fbe6ec', art: 'sparkle', artColors: ['#f2a6b8'], title: w.keshosui, sub: w.hoshitsu },
+  { id: 'nyueki', shape: 'bottle', cat: 'beauty', price: 960, note: '120ml', style: 'clean', brand: w.hanagasumi,
+    bg: '#ffffff', fg: '#a3405a', accent: '#e8c4cf', liquid: '#fff6f0', art: 'drop', artColors: ['#f2c8d4', '#a3405a'], title: w.nyueki, sub: w.hoshitsu },
+  { id: 'keshosui-select', shape: 'bottle', cat: 'beauty', price: 650, note: '200ml', ...BEAUTY,
+    fg: '#5a4a8a', accent: '#c8c0e8', liquid: '#eef0ff', art: 'drop', artColors: ['#c8c0e8', '#5a4a8a'], title: w.keshosui, sub: w.binkan },
+  { id: 'sengan', shape: 'tube', cat: 'beauty', price: 480, note: '120g', ...BEAUTY,
+    fg: '#3a6a9a', accent: '#a8d0f0', art: 'bubbles', artColors: ['#7ab0e0'], title: w.sengan, sub: w.muko },
+  { id: 'hiyakedome', shape: 'tube', cat: 'beauty', price: 780, note: 'SPF50+', style: 'pop', brand: w.hanagasumi,
+    bg: '#ffd23a', fg: '#c4302b', accent: '#ff8a3a', art: 'sparkle', artColors: ['#ffffff'], title: w.hiyakedome, sub: w.sarasara },
+  { id: 'handcream', shape: 'tube', cat: 'beauty', price: 420, note: '50g', ...BEAUTY,
+    fg: '#c3264f', accent: '#ffc2d0', art: 'leaf', artColors: ['#ffb3c6', '#f28aa8'], title: w.handCream, sub: w.sakuraKaori, small: true },
+  { id: 'lipcream', shape: 'card', cat: 'beauty', price: 330, ...BEAUTY, fg: '#5a4a8a', accent: '#c8c0e8', item: 'stick', itemColor: '#c8c0e8',
+    title: w.lipCream, sub: w.muko },
+
+  // ===== Hair & body ============================================================
+  { id: 'shampoo', shape: 'pump', cat: 'bath', price: 598, note: '450ml', style: 'dark', brand: w.tsukiakari,
+    bg: '#1d2a4a', fg: '#f2d675', accent: '#f2d675', art: 'sparkle', artColors: ['#f2d675'], title: w.shampoo, sub: w.sarasara },
+  { id: 'conditioner', shape: 'pump', cat: 'bath', price: 598, note: '450ml', style: 'dark', brand: w.tsukiakari,
+    bg: '#f2ecd8', fg: '#1d2a4a', accent: '#c9a45a', art: 'sparkle', artColors: ['#c9a45a'], title: w.conditioner, sub: w.hoshitsu },
+  { id: 'bodysoap', shape: 'pump', cat: 'bath', price: 498, note: '500ml', ...BEAUTY,
+    fg: '#c3264f', accent: '#ffc2d0', art: 'leaf', artColors: ['#ffb3c6', '#f28aa8'], title: w.bodySoap, sub: w.sakuraKaori },
+
+  // ===== More daily goods ======================================================
+  { id: 'haburashi', shape: 'card', cat: 'daily', price: 198, ...SEL, fg: '#1d8a6a', accent: '#9ae0c8', item: 'brush', itemColor: '#3ac0a0', title: w.haburashi, sub: w.futsu },
+  { id: 'menbo', shape: 'box', cat: 'daily', price: 158, dims: [0.07, 0.09, 0.07], ...SEL, fg: '#3a6a9a', accent: '#c8dcef', art: 'box', artColors: ['#ffffff', '#c8dcef'], title: w.menbo, sub: w.kokusan },
+  { id: 'kutsushita', shape: 'card', cat: 'daily', price: 550, ...SEL, fg: '#2b3140', accent: '#9aa0a9', item: 'socks', itemColor: '#2a2d33', title: w.kutsushita, sub: w.kuro, big: true },
+  { id: 'cable', shape: 'card', cat: 'daily', price: 1280, ...SEL, fg: '#2b3140', accent: '#f2d675', item: 'cable', itemColor: '#f4f4f4', title: w.cable, sub: w.typeC },
+  { id: 'ballpen', shape: 'card', cat: 'daily', price: 150, ...SEL, fg: '#2b3140', accent: '#9aa0a9', item: 'pen', itemColor: '#2a2d33', title: w.ballpen, sub: w.kuro },
+  { id: 'note', shape: 'box', cat: 'daily', price: 180, dims: [0.18, 0.25, 0.006], ...SEL, fg: '#2a5aa0', accent: '#a8c8f0', art: 'box', artColors: ['#ffffff', '#a8c8f0'], title: w.note, sub: w.futsu },
+  { id: 'kasa', shape: 'umbrella', cat: 'daily', price: 600, ...SEL, fg: '#2b3140', accent: '#cfe3ea', title: w.jumbo, sub: w.kasa },
+
+  // ===== Magazines =============================================================
+  { id: 'mag-jump', shape: 'magazine', cat: 'magazine', price: 300, brand: w.shukan, title: w.pyonJump, sub: w.manga, bg: '#f2d23a', fg: '#c4302b', accent: '#1d2a4a', cover: 'manga' },
+  { id: 'mag-ryori', shape: 'magazine', cat: 'magazine', price: 680, brand: w.gekkan, title: w.ryori, sub: w.kantan, bg: '#fff6e8', fg: '#c4502b', accent: '#5a8a3a', cover: 'food' },
+  { id: 'mag-ryoko', shape: 'magazine', cat: 'magazine', price: 880, brand: w.gekkan, title: w.ryoko, sub: w.onsen, badge: w.tokushu, bg: '#e8f4fb', fg: '#1d4f9c', accent: '#c4302b', cover: 'travel' },
+  { id: 'mag-fashion', shape: 'magazine', cat: 'magazine', price: 790, brand: w.gekkan, title: w.fashion, sub: w.aki, bg: '#f4ece4', fg: '#2b3140', accent: '#c48a5a', cover: 'fashion' },
+  { id: 'mag-game', shape: 'magazine', cat: 'magazine', price: 650, brand: w.shukan, title: w.game, sub: w.shinShohin, bg: '#1b1e5a', fg: '#e8ff3a', accent: '#ff3aa8', cover: 'game' },
+  { id: 'mag-kuruma', shape: 'magazine', cat: 'magazine', price: 720, brand: w.gekkan, title: w.kuruma, sub: w.tokushu, bg: '#2a2d33', fg: '#ffffff', accent: '#c4302b', cover: 'car' },
+  { id: 'mag-neko', shape: 'magazine', cat: 'magazine', price: 640, brand: w.gekkan, title: w.neko, sub: w.tokushu, bg: '#fff3dc', fg: '#a3502a', accent: '#f2a65a', cover: 'cat' },
 ];
 
 for (const p of products) {

@@ -101,27 +101,69 @@ function wires(parent, mat, poles, heights) {
   }
 }
 
+// A tall little kei wagon, built from an extruded side profile.
 function car(parent, x, z, color, rotY = 0) {
   const g = new THREE.Group();
-  const body = std(color, { roughness: 0.25, metalness: 0.5 });
-  const glass = std('#1d2630', { roughness: 0.05, metalness: 0.6 });
-  const tyre = std('#151515', { roughness: 0.9 });
-  addBox(g, [1.45, 0.6, 3.3], body, [0, 0.58, 0]);
-  addBox(g, [1.36, 0.16, 2.2], body, [0, 0.95, -0.2]);
-  addBox(g, [1.32, 0.12, 1.9], body, [0, 1.52, -0.3]);
-  addBox(g, [1.34, 0.44, 1.8], glass, [0, 1.24, -0.3], { cast: false });
-  for (const dz of [-0.3, 0.5, -1.15]) addBox(g, [1.36, 0.46, 0.08], body, [0, 1.24, dz], { cast: false });
-  const shield = addBox(g, [1.3, 0.5, 0.04], glass, [0, 1.22, 0.66], { cast: false });
-  shield.rotation.x = -0.5;
-  for (const [dx, dz] of [[-0.65, 1.05], [0.65, 1.05], [-0.65, -1.05], [0.65, -1.05]]) {
-    const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 18), tyre);
+  const body = std(color, { roughness: 0.22, metalness: 0.55 });
+  const glass = std('#1b2430', { roughness: 0.05, metalness: 0.7 });
+  const trim = std('#1a1b1e', { roughness: 0.7 });
+  const W = 1.38;
+  const side = new THREE.Shape();
+  side.moveTo(-1.62, 0.3);
+  side.lineTo(1.55, 0.3);
+  side.quadraticCurveTo(1.68, 0.3, 1.68, 0.5);
+  side.lineTo(1.66, 0.82);
+  side.quadraticCurveTo(1.62, 0.95, 1.4, 0.98);
+  side.lineTo(0.95, 1.08);
+  side.quadraticCurveTo(0.62, 1.62, 0.4, 1.66);
+  side.lineTo(-1.45, 1.68);
+  side.quadraticCurveTo(-1.64, 1.67, -1.65, 1.5);
+  side.lineTo(-1.66, 0.45);
+  side.quadraticCurveTo(-1.66, 0.3, -1.62, 0.3);
+  const shell = new THREE.Mesh(new THREE.ExtrudeGeometry(side, { depth: W, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 4, curveSegments: 10 }), body);
+  shell.rotation.y = -Math.PI / 2;
+  shell.position.x = W / 2;
+  shell.castShadow = shell.receiveShadow = true;
+  g.add(shell);
+  // window band
+  const win = new THREE.Shape();
+  win.moveTo(0.9, 1.12);
+  win.quadraticCurveTo(0.62, 1.55, 0.42, 1.58);
+  win.lineTo(-1.42, 1.6);
+  win.lineTo(-1.5, 1.12);
+  win.lineTo(0.9, 1.12);
+  const winMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(win, { depth: W + 0.14, bevelEnabled: false }), glass);
+  winMesh.rotation.y = -Math.PI / 2;
+  winMesh.position.x = (W + 0.14) / 2;
+  g.add(winMesh);
+  // pillars break the glass into windows
+  for (const zz of [-0.35, 0.45]) addBox(g, [W + 0.16, 0.48, 0.07], body, [0, 1.36, zz], { cast: false });
+  addBox(g, [W + 0.1, 0.12, 0.14], trim, [0, 0.38, 1.7], { cast: false });
+  addBox(g, [W + 0.1, 0.12, 0.14], trim, [0, 0.38, -1.7], { cast: false });
+  const tyre = std('#141414', { roughness: 0.9 });
+  const hub = std('#c9ced4', { metalness: 0.9, roughness: 0.3 });
+  for (const [dx, dz] of [[-0.66, 1.05], [0.66, 1.05], [-0.66, -1.05], [0.66, -1.05]]) {
+    const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 24), tyre);
     wh.rotation.z = Math.PI / 2;
     wh.position.set(dx, 0.3, dz);
+    wh.castShadow = true;
     g.add(wh);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.21, 16), hub);
+    cap.rotation.z = Math.PI / 2;
+    cap.position.copy(wh.position);
+    g.add(cap);
   }
-  const lamp = std('#fff6d0', { emissive: '#fff2c0', emissiveIntensity: 0.2 });
-  addBox(g, [0.3, 0.12, 0.04], lamp, [-0.5, 0.7, 1.66]);
-  addBox(g, [0.3, 0.12, 0.04], lamp, [0.5, 0.7, 1.66]);
+  const lamp = std('#fff6d0', { emissive: '#fff2c0', emissiveIntensity: 0.3, roughness: 0.1 });
+  for (const dx of [-0.5, 0.5]) {
+    const l = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 10), lamp);
+    l.scale.set(1.3, 0.8, 0.4);
+    l.position.set(dx, 0.84, 1.72);
+    g.add(l);
+    addBox(g, [0.18, 0.1, 0.04], std('#c4302b', { emissive: '#5a0a0a', emissiveIntensity: 0.5 }), [dx * 1.15, 0.95, -1.73], { cast: false });
+  }
+  // the yellow kei-car number plate
+  addBox(g, [0.34, 0.17, 0.02], std('#f2d23a', { roughness: 0.5 }), [0, 0.55, 1.76], { cast: false });
+  addBox(g, [0.34, 0.17, 0.02], std('#f2d23a', { roughness: 0.5 }), [0, 0.6, -1.76], { cast: false });
   g.position.set(x, 0, z);
   g.rotation.y = rotY;
   parent.add(g);

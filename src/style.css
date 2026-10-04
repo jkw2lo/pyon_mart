@@ -86,3 +86,49 @@ kbd { font: 600 11px/1 system-ui; padding: 3px 6px; border-radius: 5px; backgrou
 #enter:disabled { opacity: .6; cursor: default; }
 .controls { list-style: none; padding: 0; margin: 0; font-size: 13px; color: #aab0c0; line-height: 2.1; }
 .controls kbd { background: #2b3140; color: #e8eaf0; border-color: #4a5268; box-shadow: 0 1px 0 #4a5268; }
+
+/* popovers */
+.pill.icon { width: 36px; height: 36px; padding: 0; font-size: 17px; display: grid; place-items: center; }
+.popover { position: fixed; top: 60px; right: 16px; width: 290px; max-height: 70vh; overflow: auto; background: var(--panel); border-radius: 14px; box-shadow: 0 10px 30px #0004; padding: 14px 16px; z-index: 15; pointer-events: auto; font-size: 13px; }
+.pop-head { margin-bottom: 8px; font-size: 15px; }
+.pop-head small { color: #888; margin-left: 4px; font-size: 12px; }
+.pop-foot { margin-top: 10px; color: #666; font-size: 12px; }
+#basket-list .b-item { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 7px 0; border-bottom: 1px solid #ebe8e0; }
+#basket-list .b-item .j { font: 700 15px var(--jp); }
+#basket-list .b-item .k { font-size: 11px; color: #777; grid-column: 1; }
+#basket-list .b-item .p { font-weight: 700; grid-row: 1 / span 2; align-self: center; }
+#basket-list .empty { color: #888; padding: 8px 0; }
+#settings-panel .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; }
+#settings-panel input[type=range] { width: 120px; accent-color: var(--slate); }
+.link { background: none; border: 0; color: #a3320b; cursor: pointer; padding: 6px 0; font-size: 12px; }
+#tip-banner { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); background: rgba(43,49,64,.92); color: #fff; padding: 9px 16px; border-radius: 10px; font-size: 13px; pointer-events: none; white-space: nowrap; }
+#tip-banner kbd { background: #3d4558; color: #fff; border-color: #56607a; box-shadow: none; }
+
+/* checkout */
+#checkout { position: fixed; inset: 0; z-index: 22; background: rgba(13,18,32,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; }
+.co-inner { display: flex; gap: 22px; align-items: flex-start; padding: 16px; max-width: 100%; }
+.co-left { width: 360px; max-width: calc(100vw - 32px); }
+.co-clerk { display: flex; gap: 10px; align-items: center; color: #fff; margin-bottom: 10px; }
+.co-clerk small { display: block; color: #aab0c0; font-size: 12px; }
+.co-avatar { width: 46px; height: 46px; border-radius: 50%; background: #e9e6e1; position: relative; box-shadow: inset 0 -8px 0 #2b3140; }
+.co-avatar::before, .co-avatar::after { content: ''; position: absolute; top: -20px; width: 10px; height: 28px; background: #e9e6e1; border-radius: 6px; }
+.co-avatar::before { left: 11px; transform: rotate(-10deg); } .co-avatar::after { right: 11px; transform: rotate(10deg); }
+.co-bubble { background: var(--paper); border-radius: 14px; padding: 14px 16px; font-size: 14px; line-height: 1.6; min-height: 70px; box-shadow: 0 8px 26px #0005; position: relative; }
+.co-bubble .big { font: 700 22px var(--jp); display: block; }
+.co-bubble .en { color: #666; font-size: 13px; }
+.co-answers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.co-answers button { font: 700 15px var(--jp); border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; background: var(--moon); color: var(--ink); }
+.co-answers button.alt { background: #e9e7e1; }
+.co-answers button small { font: 500 11px system-ui; display: block; color: #555; }
+.co-receipt { width: 270px; background: #fffefb; padding: 16px 16px 22px; font: 13px ui-monospace, Menlo, monospace; color: #222; box-shadow: 0 8px 26px #0005; clip-path: polygon(0 0, 100% 0, 100% 100%, 93% 98%, 86% 100%, 79% 98%, 72% 100%, 65% 98%, 58% 100%, 51% 98%, 44% 100%, 37% 98%, 30% 100%, 23% 98%, 16% 100%, 9% 98%, 0 100%); }
+.r-head { text-align: center; border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+.r-head svg { width: 42px; height: 42px; }
+.r-head .jp { font-size: 16px; }
+.r-head small { color: #777; font-size: 11px; }
+.r-line { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; animation: rin .25s ease-out; }
+.r-line .jp { font-weight: 500; font-family: var(--jp); }
+@keyframes rin { from { opacity: 0; transform: translateY(-4px); } }
+#r-total { border-top: 1px dashed #aaa; margin-top: 8px; padding-top: 8px; font-weight: 700; }
+.r-foot { text-align: center; margin-top: 10px; color: #777; font-size: 11px; }
+.jpw { border-bottom: 1px dotted currentColor; cursor: help; }
+@media (max-width: 760px) { .co-inner { flex-direction: column; align-items: center; } }

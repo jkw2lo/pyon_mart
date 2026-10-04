@@ -1,6 +1,6 @@
 // Flat vector illustrations for packaging, drawn straight onto label canvases,
 // plus the Pyon Mart brand marks preloaded as images for the store brand.
-import { hare, logoBadge, PALETTE } from './logo.js';
+import { logoBadge, bandMark } from './logo.js';
 
 const TAU = Math.PI * 2;
 
@@ -18,15 +18,13 @@ function svgImage(svg) {
 }
 
 // Must be awaited before any label is drawn.
-export async function preloadBrandArt() {
-  const markOn = (fg, moon) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="20 40 200 180" width="400" height="360">
-    <circle cx="120" cy="164" r="58" fill="${moon}"/>${hare(120, 164, 58, fg, { eye: moon })}</svg>`;
-  const [badge, white, slate] = await Promise.all([
+export async function preloadBrandArt(bands = []) {
+  const [badge, ...marks] = await Promise.all([
     svgImage(logoBadge({ size: 512 })),
-    svgImage(markOn('#ffffff', 'rgba(255,255,255,0.28)')),
-    svgImage(markOn(PALETTE.bunny, '#e7e9ee')),
+    ...bands.map((b) => svgImage(bandMark(b))),
   ]);
-  Object.assign(brandArt, { badge, white, slate });
+  brandArt.badge = badge;
+  bands.forEach((b, i) => (brandArt['band:' + b] = marks[i]));
 }
 
 // --- helpers ---------------------------------------------------------------------
@@ -325,8 +323,8 @@ export function drawArt(c, kind, x, y, s, colors = ['#888']) {
   c.restore();
 }
 
-// A small round moon-and-hare stamp for the store brand.
-export function drawMark(c, x, y, h, variant = 'white') {
-  const img = brandArt[variant];
-  if (img) c.drawImage(img, x, y, h * (400 / 360), h);
+// The store roundel (white moon, hare in the band colour) for packaging.
+export function drawMark(c, x, y, h, band = '#2b3140') {
+  const img = brandArt['band:' + band] || brandArt.badge;
+  if (img) c.drawImage(img, x, y, h, h);
 }

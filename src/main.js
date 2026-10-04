@@ -6,18 +6,20 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { words } from './data/words.js';
-import { byId } from './data/products.js';
+import { byId, products } from './data/products.js';
 import { allWords, wordAt } from './label.js';
 import { preloadBrandArt } from './art.js';
 import { productTemplate } from './products.js';
 import { makeMaterials, Colliders } from './world/common.js';
 import { buildExterior } from './world/exterior.js';
 import { buildInterior } from './world/interior.js';
+import { buildDecor } from './world/decor.js';
 import { createEnvironment } from './environment.js';
 import { Player } from './player.js';
 import { Inspector } from './inspect.js';
 import { logoLockup, logoBadge } from './logo.js';
 import { createAudio } from './audio.js';
+import { runCheckout, jp } from './checkout.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -33,7 +35,7 @@ async function loadFonts() {
 $('#start-logo').innerHTML = logoLockup({ width: 560, dark: true });
 $('#mini-logo').innerHTML = logoBadge({ size: 44 });
 
-await Promise.all([loadFonts(), preloadBrandArt()]);
+await Promise.all([loadFonts(), preloadBrandArt([...new Set(products.filter((p) => p.band).map((p) => p.band))])]);
 
 // --- renderer / scene ---------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
@@ -75,7 +77,24 @@ const mats = makeMaterials();
 const colliders = new Colliders();
 const ext = buildExterior(scene, mats, colliders);
 const int = buildInterior(scene, mats, colliders);
+const decor = buildDecor(scene, mats, colliders, ext);
 const env = createEnvironment(scene, renderer);
+
+// Capture the shop interior once and use it for reflections on the floor, glass and metal.
+{
+  const cubeRT = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType });
+  const cubeCam = new THREE.CubeCamera(0.1, 30, cubeRT);
+  cubeCam.position.set(0, 1.3, 0);
+  env.update(13);
+  cubeCam.update(renderer, scene);
+  const interiorEnv = pmrem.fromCubemap(cubeRT.texture).texture;
+  for (const m of [mats.floor, mats.fridgeGlass, mats.aluminium, mats.shelfEdge, mats.shelfWhite]) {
+    m.envMap = interiorEnv;
+    m.envMapIntensity = m === mats.floor ? 0.9 : 0.7;
+    m.needsUpdate = true;
+  }
+  mats.floor.roughness = 0.16;
+}
 const player = new Player(camera, renderer.domElement, colliders);
 const audio = createAudio();
 
@@ -156,15 +175,123 @@ function closeInspect(keep = false) {
   $('#hud').classList.remove('hidden');
   player.enabled = true;
 }
+function updateBasket() {
+  $('#basket-count').textContent = basket.length;
+  $('#basket-total').textContent = basket.reduce((s, d) => s + d.price, 0);
+  $('#basket-list').innerHTML = basket.length
+    ? basket.map((d) => `<div class="b-item"><span class="j">${jp(d.title)}</span><span class="p">¥${d.price}</span><span class="k">${d.title.romaji} · ${d.title.en}</span></div>`).join('')
+    : '<div class="empty">Nothing yet — pick something up and press <kbd>B</kbd>.</div>';
+}
 function addToBasket() {
   if (!inspecting) return;
   const { def } = inspecting;
   basket.push(def);
-  $('#basket-count').textContent = basket.length;
-  $('#basket-total').textContent = basket.reduce((s, d) => s + d.price, 0);
+  updateBasket();
   toast(`<span class="jp">${def.title.jp}</span> added to your basket`);
   closeInspect(true);
+  tips.basketed = true;
 }
+let checkingOut = false;
+function startCheckout() {
+  if (!basket.length) {
+    toast(`<span class="jp">いらっしゃいませ！</span> Pick something up first, then bring it here.`);
+    return;
+  }
+  checkingOut = true;
+  player.enabled = false;
+  clearHover();
+  closePopovers();
+  runCheckout(basket, {
+    audio,
+    onDone(sum) {
+      basket.length = 0;
+      updateBasket();
+      checkingOut = false;
+      player.enabled = true;
+      toast(`Paid ¥${sum}. <span class="jp">ありがとうございました！</span>`);
+      tips.checkedOut = true;
+      saveTips();
+    },
+  });
+}
+
+// --- popovers + settings ---------------------------------------------------------
+function closePopovers() {
+  $('#basket-panel').classList.add('hidden');
+  $('#settings-panel').classList.add('hidden');
+}
+function togglePopover(id) {
+  const el = $(id);
+  const open = el.classList.contains('hidden');
+  closePopovers();
+  el.classList.toggle('hidden', !open);
+}
+$('#basket-btn').onclick = () => { updateBasket(); togglePopover('#basket-panel'); };
+$('#settings-btn').onclick = () => togglePopover('#settings-panel');
+const settings = { sens: 1, invert: false, vol: 0.8, tips: true };
+try { Object.assign(settings, JSON.parse(localStorage.getItem('pyon-settings') || '{}')); } catch { /* defaults */ }
+function applySettings() {
+  player.lookScale = settings.sens;
+  player.invert = settings.invert;
+  audio.setVolume(settings.vol);
+  $('#set-sens').value = settings.sens;
+  $('#set-invert').checked = settings.invert;
+  $('#set-vol').value = settings.vol;
+  $('#set-tips').checked = settings.tips;
+  try { localStorage.setItem('pyon-settings', JSON.stringify(settings)); } catch { /* not saved */ }
+}
+$('#set-sens').oninput = (e) => { settings.sens = +e.target.value; applySettings(); };
+$('#set-invert').onchange = (e) => { settings.invert = e.target.checked; applySettings(); };
+$('#set-vol').oninput = (e) => { settings.vol = +e.target.value; applySettings(); };
+$('#set-tips').onchange = (e) => { settings.tips = e.target.checked; applySettings(); };
+$('#reset-words').onclick = () => {
+  found.clear();
+  try { localStorage.removeItem('pyon-words'); } catch { /* fine */ }
+  updateWordCount();
+  toast('Word book cleared');
+};
+applySettings();
+updateBasket();
+
+// Japanese inside the UI (receipt, basket, clerk) is hoverable too
+document.addEventListener('mouseover', (e) => {
+  const el = e.target.closest?.('.jpw');
+  if (el) showTip(allWords.get(el.dataset.jp), e.clientX, e.clientY);
+});
+document.addEventListener('mousemove', (e) => {
+  const el = e.target.closest?.('.jpw');
+  if (el) showTip(allWords.get(el.dataset.jp), e.clientX, e.clientY);
+});
+document.addEventListener('mouseout', (e) => { if (e.target.closest?.('.jpw')) showTip(null); });
+
+// --- contextual tips ----------------------------------------------------------------
+const tips = { moved: false, door: false, inside: false, basketed: false, checkedOut: false };
+try { Object.assign(tips, JSON.parse(localStorage.getItem('pyon-tips') || '{}')); } catch { /* fresh */ }
+const saveTips = () => { try { localStorage.setItem('pyon-tips', JSON.stringify(tips)); } catch { /* fine */ } };
+let tipClock = 0, startPos = null;
+function updateTips(dt) {
+  const el = $('#tip-banner');
+  let msg = '';
+  if (settings.tips && started && player.enabled) {
+    tipClock += dt;
+    startPos ??= player.pos.clone();
+    if (!tips.moved) {
+      msg = '<kbd>Drag</kbd> to look around · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to walk';
+      if (player.pos.distanceTo(startPos) > 3) { tips.moved = true; saveTips(); }
+    } else if (!player.inside && !tips.door && door.target === 0 && player.pos.distanceTo(door.center) < 7) {
+      msg = 'Click the doors to go in';
+    } else if (player.inside && !tips.inside) {
+      tips.door = true;
+      msg = 'Hover over any Japanese text to see how it’s read · click a product to pick it up';
+      if ((tips.insideT = (tips.insideT || 0) + dt) > 9) { tips.inside = true; saveTips(); }
+    } else if (basket.length && !tips.checkedOut) {
+      msg = 'When you’re done, take your basket to the <span class="jp">レジ</span> (register) and click the clerk';
+    }
+  }
+  el.innerHTML = msg;
+  el.classList.toggle('hidden', !msg);
+}
+
 $('#btn-back').onclick = () => closeInspect();
 $('#btn-basket').onclick = addToBasket;
 $('#btn-turn').onclick = () => inspector.turnOver();
@@ -235,12 +362,12 @@ function updateDoors(dt) {
 const ray = new THREE.Raycaster();
 const mouse = { x: innerWidth / 2, y: innerHeight / 2, inside: false };
 const ndc = new THREE.Vector2();
-const targets = [ext.group, int.group];
+const targets = [ext.group, int.group, decor.group];
 const REACH = 2.8;
 let aim = null;
 
 renderer.domElement.addEventListener('pointermove', (e) => { if (mouse.frozen) return; mouse.x = e.clientX; mouse.y = e.clientY; mouse.inside = true; });
-renderer.domElement.addEventListener('pointerleave', () => { if (!mouse.frozen) mouse.inside = false; });
+renderer.domElement.addEventListener('pointerleave', () => { if (!mouse.frozen) { mouse.inside = false; clearHover(); } });
 
 // soft glow shell shown over the product under the cursor
 const glowMat = new THREE.MeshBasicMaterial({ color: '#fff6d8', transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -284,6 +411,7 @@ function updateAim() {
     const o = h.object;
     if (o.userData.noHit || !o.visible) continue;
     if (o.userData.door) { if (h.distance < 7) aim = { kind: 'door', hit: h, word: wordAt(h) }; break; }
+    if (o.userData.register) { if (h.distance < 3.4) aim = { kind: 'register', hit: h }; break; }
     if (o.userData.productId) {
       if (h.distance < REACH + 1.2) aim = { kind: 'product', id: o.userData.productId, index: h.instanceId, hit: h, word: wordAt(h), reach: h.distance < REACH };
       break;
@@ -302,6 +430,11 @@ function updateAim() {
     hint.innerHTML = door.target ? '' : 'Click to open';
     place();
     glow.clear(); glowKey = '';
+  } else if (aim.kind === 'register') {
+    renderer.domElement.style.cursor = 'pointer';
+    hint.innerHTML = basket.length ? 'Click to check out' : 'Pick something up first';
+    place();
+    glow.clear(); glowKey = '';
   } else if (aim.kind === 'product') {
     renderer.domElement.style.cursor = aim.word ? 'help' : aim.reach ? 'pointer' : '';
     hint.innerHTML = aim.reach ? (aim.word ? '' : 'Click to pick up') : '';
@@ -317,6 +450,7 @@ function updateAim() {
 function interact() {
   if (!aim) return;
   if (aim.kind === 'door') openDoors();
+  else if (aim.kind === 'register') startCheckout();
   else if (aim.kind === 'product' && aim.reach) openInspect(aim.id, aim.index);
 }
 
@@ -340,6 +474,8 @@ addEventListener('keydown', (e) => {
     else if (e.code === 'KeyR') inspector.reset();
     return;
   }
+  if (checkingOut) return;
+  if (e.code === 'Escape') closePopovers();
   if (e.code === 'KeyJ' && started) toggleWordbook();
   else if (e.code === 'Escape' && !$('#wordbook').classList.contains('hidden')) toggleWordbook(false);
   else if (e.code === 'KeyT' && started) setTime(hours < 6 || hours >= 18.5 ? 12 : 21);
@@ -361,6 +497,7 @@ updateWordCount();
 
 // --- loop -------------------------------------------------------------------------
 let last = performance.now();
+let lastStep = 0;
 let fps = 60;
 function frame() {
   const now = performance.now();
@@ -370,6 +507,11 @@ function frame() {
   if ($('#time-auto').checked && !inspecting) setTime(hours + dt * 0.05);
   player.update(dt);
   updateDoors(dt);
+  decor.update(dt, hours);
+  updateTips(dt);
+  const step = Math.floor(player.bob / Math.PI);
+  if (step !== lastStep && player.speed > 0.5) audio.step(player.inside);
+  lastStep = step;
   if (player.enabled) updateAim();
   audio.update(player.inside, door.amt);
   if (inspecting) {
