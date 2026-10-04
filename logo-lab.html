@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <title>Pyon Mart logo lab</title>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  body { margin: 0; padding: 24px; font-family: system-ui, sans-serif; background: #f4f5f7; color: #333; }
-  .row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; }
-  .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px #0001; text-align: center; }
+  body { margin: 0; padding: 20px; font-family: system-ui, sans-serif; background: #f4f5f7; color: #333; }
+  .row { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; align-items: center; }
+  .card { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px #0001; text-align: center; font-size: 12px; }
   .dark { background: #1d2230; color: #ddd; }
-  .small svg { width: 48px; height: 48px; }
 </style>
 </head>
 <body>
@@ -18,15 +17,15 @@
   <div class="row" id="lockups"></div>
   <script type="module">
     import { VARIANTS, logoLockup } from './src/logo.js';
+    document.getElementById('hero').innerHTML =
+      `<div class="card">${VARIANTS.badge({ size: 380 })}</div><div class="card">${VARIANTS.rim({ size: 380 })}</div>`;
     const marks = document.getElementById('marks');
     for (const [name, fn] of Object.entries(VARIANTS)) {
-      marks.insertAdjacentHTML('beforeend', `<div class="card">${fn({ size: 220 })}<div>${name}</div>
-        <div class="small">${fn({ size: 48 })} ${fn({ size: 24 })}</div></div>`);
+      marks.insertAdjacentHTML('beforeend', `<div class="card">${fn({ size: 150 })}<div>${name} ${fn({ size: 40 })} ${fn({ size: 20 })}</div></div>`);
     }
-    document.getElementById('hero').innerHTML = `<div class="card">${VARIANTS.rim({size:420})}</div><div class="card">${VARIANTS.badge({size:420})}</div>`;
     const l = document.getElementById('lockups');
-    l.insertAdjacentHTML('beforeend', `<div class="card">${logoLockup({ width: 540 })}</div>`);
-    l.insertAdjacentHTML('beforeend', `<div class="card dark">${logoLockup({ width: 540, dark: true, mark: 'badge' })}</div>`);
+    l.insertAdjacentHTML('beforeend', `<div class="card">${logoLockup({ width: 520 })}</div>`);
+    l.insertAdjacentHTML('beforeend', `<div class="card dark">${logoLockup({ width: 520, dark: true })}</div>`);
   </script>
 </body>
 </html>

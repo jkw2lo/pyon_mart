@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
-// First-person walker: pointer-lock mouse look (drag-to-look fallback), WASD,
-// circle-vs-rectangle collision against the world's colliders.
+// First-person walker. The mouse stays free so you can hover anything to read
+// it: drag to look around, WASD / arrows to walk, a clean click to interact.
 export class Player {
   constructor(camera, dom, colliders) {
     this.camera = camera;
@@ -10,67 +10,82 @@ export class Player {
     this.pos = new THREE.Vector3(3, 0, 24);
     this.yaw = 0;          // 0 = looking toward -z (the store)
     this.pitch = -0.04;
+    this.yawV = 0;         // smoothed look velocity for a softer feel
+    this.pitchV = 0;
     this.radius = 0.28;
     this.eye = 1.58;
     this.keys = new Set();
     this.enabled = false;
-    this.locked = false;
     this.bob = 0;
-    this.dragging = false;
+    this.speed = 0;
+    this.drag = null;       // { x, y, moved }
 
-    addEventListener('keydown', (e) => this.keys.add(e.code));
+    addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLInputElement) return;
+      this.keys.add(e.code);
+    });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
-    document.addEventListener('pointerlockchange', () => {
-      this.locked = document.pointerLockElement === dom;
+
+    dom.addEventListener('pointerdown', (e) => {
+      if (!this.enabled || (e.button !== 0 && e.button !== 2)) return;
+      this.drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: 0, t: performance.now() };
+      dom.setPointerCapture(e.pointerId);
     });
-    document.addEventListener('mousemove', (e) => {
-      if (!this.enabled) return;
-      if (this.locked || this.dragging) this.look(e.movementX, e.movementY);
+    dom.addEventListener('pointermove', (e) => {
+      if (!this.drag) return;
+      const dx = e.clientX - this.drag.x, dy = e.clientY - this.drag.y;
+      this.drag.x = e.clientX;
+      this.drag.y = e.clientY;
+      this.drag.moved = Math.max(this.drag.moved, Math.hypot(e.clientX - this.drag.sx, e.clientY - this.drag.sy));
+      // only start turning once it's clearly a drag, so clicks never nudge the view
+      if (this.drag.moved > 6) this.look(dx, dy);
     });
-    dom.addEventListener('mousedown', (e) => { if (!this.locked && e.button === 0) this.dragging = true; });
-    addEventListener('mouseup', () => (this.dragging = false));
+    dom.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
-  lock() {
-    try {
-      const p = this.dom.requestPointerLock?.();
-      if (p && p.catch) p.catch(() => {});
-    } catch { /* drag-to-look still works */ }
+  // returns true if the pointer-up should count as a click
+  endDrag() {
+    const d = this.drag;
+    this.drag = null;
+    return !!d && d.moved <= 6 && performance.now() - d.t < 600;
   }
 
-  unlock() {
-    if (document.pointerLockElement) document.exitPointerLock();
+  get dragging() {
+    return !!this.drag && this.drag.moved > 6;
   }
 
   look(dx, dy) {
-    const s = this.locked ? 0.0022 : 0.004;
-    this.yaw -= dx * s;
-    this.pitch = THREE.MathUtils.clamp(this.pitch - dy * s, -1.35, 1.35);
+    this.yaw -= dx * 0.0035;
+    this.pitch = THREE.MathUtils.clamp(this.pitch - dy * 0.0035, -1.3, 1.3);
   }
 
   update(dt) {
     const k = this.keys;
-    let f = 0, r = 0;
+    let f = 0, r = 0, turn = 0;
     if (this.enabled) {
       if (k.has('KeyW') || k.has('ArrowUp')) f += 1;
       if (k.has('KeyS') || k.has('ArrowDown')) f -= 1;
-      if (k.has('KeyD') || k.has('ArrowRight')) r += 1;
-      if (k.has('KeyA') || k.has('ArrowLeft')) r -= 1;
-      if (k.has('KeyQ')) this.yaw += dt * 1.8;
-      if (k.has('KeyE')) this.yaw -= dt * 1.8;
+      if (k.has('KeyD')) r += 1;
+      if (k.has('KeyA')) r -= 1;
+      if (k.has('KeyQ') || k.has('ArrowLeft')) turn += 1;
+      if (k.has('KeyE') || k.has('ArrowRight')) turn -= 1;
     }
-    const speed = k.has('ShiftLeft') || k.has('ShiftRight') ? 4.2 : 2.2;
+    this.yawV += (turn * 1.9 - this.yawV) * Math.min(1, dt * 10);
+    this.yaw += this.yawV * dt;
+
+    const target = (k.has('ShiftLeft') || k.has('ShiftRight') ? 4.0 : 2.1) * (f || r ? 1 : 0);
+    this.speed += (target - this.speed) * Math.min(1, dt * 8);
     const len = Math.hypot(f, r);
-    if (len > 0) {
-      f /= len; r /= len;
+    if (len > 0) { this.dirF = f / len; this.dirR = r / len; }
+    if (this.speed > 0.01 && this.dirF !== undefined) {
       const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
-      const dx = (-sin * f + cos * r) * speed * dt;
-      const dz = (-cos * f - sin * r) * speed * dt;
+      const dx = (-sin * this.dirF + cos * this.dirR) * this.speed * dt;
+      const dz = (-cos * this.dirF - sin * this.dirR) * this.speed * dt;
       this.move(dx, dz);
-      this.bob += dt * speed * 3.2;
+      this.bob += dt * this.speed * 3.4;
     }
-    const bobY = Math.sin(this.bob) * 0.025;
+    const bobY = Math.sin(this.bob) * 0.018 * Math.min(1, this.speed / 2);
     this.camera.position.set(this.pos.x, this.pos.y + this.eye + bobY, this.pos.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
   }
@@ -97,7 +112,6 @@ export class Player {
           p.x = nx + (dx / d) * rad;
           p.z = nz + (dz / d) * rad;
         } else {
-          // centre inside the box: push out along the shallowest axis
           const opts = [[c.x0 - rad - p.x, 0], [c.x1 + rad - p.x, 0], [0, c.z0 - rad - p.z], [0, c.z1 + rad - p.z]];
           opts.sort((a, b) => Math.abs(a[0] + a[1]) - Math.abs(b[0] + b[1]));
           p.x += opts[0][0];

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { addBox, std, sign } from './common.js';
 import { Label, FONTS, canvasTex, noise } from '../label.js';
 import { words as w } from '../data/words.js';
-import { logoRim, logoBadge } from '../logo.js';
+import { brandArt } from '../art.js';
 
 export function svgImage(svg) {
   return new Promise((resolve) => {
@@ -306,19 +306,22 @@ export function buildExterior(scene, mats, colliders) {
     canopyLights.push(L);
   }
 
-  const drawFascia = (mark) => {
+  const drawFascia = () => {
     const c = fascia.ctx, W = 2048, H = 150;
     fascia.regions.length = 0;
     fascia.fill('#ffffff');
-    // stripes along the bottom
-    c.fillStyle = '#3a4150'; c.fillRect(0, H - 22, W, 22);
-    c.fillStyle = '#f2d675'; c.fillRect(0, H - 28, W, 6);
-    c.drawImage(mark, 170, 0, 128, 128);
-    fascia.text('PYON MART', 320, 62, { size: 74, color: '#3d424a', font: FONTS.round, align: 'left', maxW: 600 });
-    fascia.text(w.pyonMart, 860, 64, { size: 46, color: '#7d838d', font: FONTS.round, align: 'left' });
-    fascia.text(w.open24, 1800, 64, { size: 44, color: '#3d424a', font: FONTS.gothic });
+    // slate base with a thin gold line — the store's stripe
+    c.fillStyle = '#2b3140'; c.fillRect(0, H - 20, W, 20);
+    c.fillStyle = '#f2d675'; c.fillRect(0, H - 27, W, 7);
+    if (brandArt.badge) c.drawImage(brandArt.badge, 196, 6, 112, 112);
+    fascia.text('PYON MART', 330, 60, { size: 78, color: '#2b3140', font: '"M PLUS Rounded 1c", ' + FONTS.round, align: 'left', maxW: 560 });
+    c.fillStyle = '#f2d675'; c.beginPath(); c.roundRect(906, 52, 30, 8, 4); c.fill();
+    fascia.text(w.pyonMart, 952, 58, { size: 44, color: '#5f6672', font: '"M PLUS Rounded 1c", ' + FONTS.round, align: 'left' });
+    fascia.rect(1640, 26, 300, 70, '#2b3140', 35);
+    fascia.text(w.open24, 1790, 62, { size: 38, color: '#ffffff', font: FONTS.gothic });
     fasciaMat.map.needsUpdate = true;
   };
+  drawFascia();
 
   // tall pole sign by the road
   addBox(g, [0.3, 6, 0.3], mats.slate, [7.4, 3, 12.6]);
@@ -333,20 +336,17 @@ export function buildExterior(scene, mats, colliders) {
   }
   colliders.rect(7.4, 12.6, 0.4, 0.4);
 
-  Promise.all([svgImage(logoRim({ size: 512 })), svgImage(logoBadge({ size: 512 }))]).then(([rim, badge]) => {
-    drawFascia(rim);
+  {
     const cv = document.createElement('canvas');
     cv.width = cv.height = 512;
     const c = cv.getContext('2d');
     c.fillStyle = '#2b3140'; c.fillRect(0, 0, 512, 512);
-    c.drawImage(badge, 26, 16, 460, 460);
-    c.fillStyle = '#f2d675'; c.fillRect(0, 488, 512, 24);
+    if (brandArt.badge) c.drawImage(brandArt.badge, 6, 6, 500, 500);
     const t = new THREE.CanvasTexture(cv);
     t.colorSpace = THREE.SRGBColorSpace;
     poleSignMat.map = t;
     poleSignMat.emissiveMap = t;
-    poleSignMat.needsUpdate = true;
-  });
+  }
 
   // vending machines + bins
   const vfMat = vendingFace();

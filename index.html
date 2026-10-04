@@ -6,7 +6,7 @@
   <title>Pyon Mart</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@500;700;800&family=Noto+Serif+JP:wght@700&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@500;700;800&family=Noto+Serif+JP:wght@700&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
@@ -20,7 +20,6 @@
     <div class="hud-tr">
       <div class="pill"><span class="jp">かご</span> <b id="basket-count">0</b> · ¥<b id="basket-total">0</b></div>
     </div>
-    <div id="crosshair"></div>
     <div id="hint"></div>
     <div class="hud-bottom">
       <span id="time-icon">☀</span>
@@ -45,11 +44,15 @@
       <div class="ip-reading"></div>
       <div class="ip-en"></div>
       <div class="ip-price"></div>
+      <div class="ip-tools">
+        <button id="btn-turn" title="Turn over (F)">↻ Turn over <kbd>F</kbd></button>
+        <button id="btn-reset" title="Reset view (R)">⟲ Reset <kbd>R</kbd></button>
+      </div>
       <div class="ip-buttons">
         <button id="btn-basket" class="primary">Add to basket <kbd>B</kbd></button>
         <button id="btn-back">Put back <kbd>Esc</kbd></button>
       </div>
-      <div class="ip-help">Drag to turn it over · scroll to zoom · hover any Japanese text for its reading</div>
+      <div class="ip-help">Drag or use <kbd>A</kbd><kbd>D</kbd> to turn · scroll to zoom · hover any Japanese text for its reading</div>
     </div>
   </div>
 
@@ -66,10 +69,10 @@
       <p class="tag">A neighbourhood convenience store, somewhere in Japan. Open 24 hours.</p>
       <button id="enter" disabled>Loading…</button>
       <ul class="controls">
-        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> hurry</li>
-        <li><kbd>Mouse</kbd> look · <kbd>Click</kbd> doors &amp; products</li>
-        <li>Aim at Japanese text to see its reading</li>
-        <li><kbd>J</kbd> word book · <kbd>T</kbd> day / night · <kbd>Esc</kbd> release mouse</li>
+        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Q</kbd><kbd>E</kbd> turn · <kbd>Shift</kbd> hurry</li>
+        <li><kbd>Drag</kbd> look around · <kbd>Click</kbd> doors &amp; products</li>
+        <li>Hover any Japanese text to see its reading</li>
+        <li><kbd>J</kbd> word book · <kbd>T</kbd> day / night</li>
       </ul>
     </div>
   </div>

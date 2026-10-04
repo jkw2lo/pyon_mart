@@ -28,35 +28,48 @@ function priceTag(def) {
   return m;
 }
 
-// Fill a straight run of shelf with the given product ids.
+// Fill a straight run of shelf with the given product ids. Each product gets a
+// few facings (side-by-side copies), sized so the run looks full but varied.
 // start: front-left corner at shelf top, along: unit vector down the shelf,
 // inward: unit vector from the front edge toward the back.
-function stockRun(stocker, tagParent, ids, { start, along, inward, length, depth, rotY, gap = 0.008, rows = 3, tag = true, lie = false, tagY = -0.03 }) {
-  const seg = length / ids.length;
-  ids.forEach((id, i) => {
+function stockRun(stocker, tagParent, ids, { start, along, inward, length, depth, rotY, gap = 0.008, rows = 2, tag = true, lie = false, tagY = -0.03, maxFacings = 4 }) {
+  const items = ids.map((id) => {
     const def = byId[id];
     const size = productTemplate(def).userData.size;
-    const wdt = (lie ? size.x : size.x) + gap;
-    const dep = (lie ? size.y : size.z) + gap;
-    const n = Math.max(1, Math.floor((seg - 0.02) / wdt));
-    const nd = Math.max(1, Math.min(rows, Math.floor(depth / dep)));
-    const off = i * seg + (seg - n * wdt) / 2 + wdt / 2;
-    for (let k = 0; k < n; k++) {
+    return { def, size, w: size.x + gap, d: (lie ? size.y : size.z) + gap, n: 1 };
+  });
+  const pad = 0.03;
+  const used = () => items.reduce((s, it) => s + it.n * it.w + pad, 0);
+  // grow the narrowest groups first until the shelf is full
+  for (let guard = 0; guard < 200; guard++) {
+    const cand = items.filter((it) => it.n < maxFacings && used() + it.w <= length).sort((a, b) => a.n * a.w - b.n * b.w)[0];
+    if (!cand) break;
+    cand.n++;
+  }
+  while (used() > length && items.some((it) => it.n > 1)) items.filter((it) => it.n > 1).sort((a, b) => b.n - a.n)[0].n--;
+  const spare = Math.max(0, length - used()) / items.length;
+  let off = 0;
+  for (const it of items) {
+    const groupW = it.n * it.w + pad + spare;
+    const first = off + (groupW - it.n * it.w) / 2 + it.w / 2;
+    const nd = Math.max(1, Math.min(rows, Math.floor(depth / it.d)));
+    for (let k = 0; k < it.n; k++) {
       for (let r = 0; r < nd; r++) {
-        const p = start.clone().addScaledVector(along, off + k * wdt).addScaledVector(inward, 0.015 + dep / 2 + r * dep);
-        if (lie) p.y += size.z / 2;
-        stocker.add(def, p, rotY, lie ? -Math.PI / 2 : 0);
+        const p = start.clone().addScaledVector(along, first + k * it.w).addScaledVector(inward, 0.015 + it.d / 2 + r * it.d);
+        if (lie) p.y += it.size.z / 2;
+        stocker.add(it.def, p, rotY, lie ? -Math.PI / 2 : 0);
       }
     }
     if (tag) {
-      const t = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.05), priceTag(def));
-      const p = start.clone().addScaledVector(along, i * seg + seg / 2).addScaledVector(inward, -0.012);
+      const t = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.05), priceTag(it.def));
+      const p = start.clone().addScaledVector(along, off + groupW / 2).addScaledVector(inward, -0.012);
       p.y += tagY;
       t.position.copy(p);
       t.rotation.y = rotY;
       tagParent.add(t);
     }
-  });
+    off += groupW;
+  }
 }
 
 function hangingSign(parent, word, x, y, z, rotY, { w = 1.3, h = 0.36, bg = '#3a4150', fg = '#ffffff' } = {}) {
@@ -145,16 +158,16 @@ export function buildInterior(scene, mats, colliders) {
   addBox(g, [fx1 - fx0, 0.05, 0.05], mats.darkMetal, [(fx0 + fx1) / 2, 2.2, fz]);
   addBox(g, [fx1 - fx0, 0.05, 0.05], mats.darkMetal, [(fx0 + fx1) / 2, 0.17, fz]);
   const sections = [
-    ['ryokucha', 'ryokucha', 'hojicha', 'hojicha', 'mugicha'],
-    ['mugicha', 'tennensui', 'tennensui', 'orange', 'orange'],
-    ['hojicha', 'ryokucha', 'tennensui', 'mugicha', 'ryokucha'],
-    ['bito', 'black', 'bito', 'black', 'bito'],
-    ['ramune', 'genki', 'ramune', 'genki', 'ramune'],
-    ['gyunyu', 'ichigo', 'cafeaulait', 'gyunyu', 'ichigo'],
-    ['cafeaulait', 'ichigo', 'gyunyu', 'orange', 'tennensui'],
-    ['beer', 'beer', 'beer', 'beer', 'beer'],
-    ['beer', 'beer', 'genki', 'ramune', 'beer'],
-    ['tennensui', 'ryokucha', 'orange', 'hojicha', 'mugicha'],
+    [['ryokucha', 'koicha', 'hojicha', 'genmaicha'], ['ryokucha', 'koicha', 'hojicha'], ['genmaicha', 'mugicha', 'jasmine'], ['kocha', 'milktea', 'jasmine'], ['mugicha', 'ryokucha', 'hojicha']],
+    [['tennensui', 'tansansui', 'sports'], ['orange', 'ringo', 'budo'], ['sports', 'tennensui', 'tansansui'], ['ringo', 'budo', 'orange'], ['tennensui', 'mugicha', 'sports']],
+    [['bito', 'black', 'milkcoffee', 'cafelatte'], ['black', 'bito', 'cafelatte', 'milkcoffee'], ['milkcoffee', 'cafelatte', 'bito', 'black'], ['cafelatte', 'black', 'milkcoffee', 'bito'], ['bito', 'milkcoffee', 'black', 'cafelatte']],
+    [['ramune', 'cola', 'melonsoda'], ['cider', 'genki', 'ramune'], ['cola', 'melonsoda', 'cider'], ['genki', 'ramune', 'cola'], ['melonsoda', 'cider', 'genki']],
+    [['gyunyu', 'ichigo', 'coffeemilk'], ['cafeaulait', 'tonyu', 'yogurt'], ['ichigo', 'gyunyu', 'coffeemilk'], ['yogurt', 'tonyu', 'cafeaulait'], ['gyunyu', 'yogurt', 'ichigo']],
+    [['koicha', 'kocha', 'milktea'], ['jasmine', 'genmaicha', 'ryokucha'], ['hojicha', 'mugicha', 'koicha'], ['milktea', 'kocha', 'jasmine'], ['ryokucha', 'genmaicha', 'hojicha']],
+    [['cafelatte', 'bito', 'black', 'milkcoffee'], ['cola', 'ramune', 'genki'], ['cider', 'melonsoda', 'cola'], ['budo', 'orange', 'ringo'], ['tansansui', 'tennensui', 'sports']],
+    [['beer', 'lemonsour', 'highball'], ['highball', 'beer', 'lemonsour'], ['lemonsour', 'highball', 'beer'], ['beer', 'lemonsour', 'highball'], ['highball', 'beer', 'lemonsour']],
+    [['beer', 'highball', 'lemonsour'], ['lemonsour', 'beer', 'highball'], ['beer', 'lemonsour', 'highball'], ['highball', 'lemonsour', 'beer'], ['beer', 'highball', 'lemonsour']],
+    [['genki', 'cola', 'cider'], ['tennensui', 'sports', 'tansansui'], ['ryokucha', 'koicha', 'mugicha'], ['orange', 'ringo', 'budo'], ['gyunyu', 'ichigo', 'yogurt']],
   ];
   const shelfYs = [1.72, 1.35, 0.98, 0.61, 0.24];
   for (let d = 0; d < nDoors; d++) {
@@ -164,8 +177,8 @@ export function buildInterior(scene, mats, colliders) {
     addBox(g, [0.02, 1.95, 0.02], mats.fridgeLight, [x0 + 0.04, 1.175, fz - 0.06], { cast: false, receive: false });
     shelfYs.forEach((y, s) => {
       addBox(g, [dw - 0.04, 0.02, shelfDepth], mats.shelfWhite, [x0 + dw / 2, y - 0.01, -4.6], { cast: false });
-      stockRun(stocker, tags, [sections[d][s]], {
-        start: V(x0 + 0.03, y, -4.27), along: V(1, 0, 0), inward: V(0, 0, -1), length: dw - 0.06, depth: shelfDepth - 0.04, rotY: FACE.pz, rows: 3, tagY: -0.03,
+      stockRun(stocker, tags, sections[d][s], {
+        start: V(x0 + 0.03, y, -4.27), along: V(1, 0, 0), inward: V(0, 0, -1), length: dw - 0.06, depth: shelfDepth - 0.04, rotY: FACE.pz, rows: 2, tagY: -0.03,
       });
     });
   }
@@ -192,34 +205,40 @@ export function buildInterior(scene, mats, colliders) {
   addBox(g, [0.45, 0.015, cLen], mats.fridgeLight, [cx + 0.3, 1.885, (cz0 + cz1) / 2], { cast: false });
   for (const z of [cz0, cz1]) addBox(g, [0.88, 2.1, 0.05], std('#e9ebee', { roughness: 0.4 }), [cx + 0.44, 1.05, z]);
   addBox(g, [0.06, 0.12, cLen], mats.shelfEdge, [cx + 0.85, 0.5, (cz0 + cz1) / 2]);
+  // two runs per tier: onigiri/bento at the front end, sandwiches & desserts further back
+  const split = -0.1;
   const cShelves = [
-    { y: 1.6, d: 0.36, ids: ['konbu', 'mentaiko', 'tunamayo', 'benishake', 'ume'] },
-    { y: 1.26, d: 0.42, ids: ['tunamayo', 'benishake', 'ume', 'konbu', 'mentaiko'] },
-    { y: 0.92, d: 0.5, ids: ['tamago', 'katsu', 'tamago', 'katsu'] },
-    { y: 0.55, d: 0.75, ids: ['karaage', 'makunouchi', 'zarusoba', 'karaage'], rows: 4 },
+    { y: 1.6, d: 0.36, a: ['tunamayo', 'benishake', 'ume', 'konbu', 'mentaiko', 'okaka'], b: ['purin', 'parfait', 'rollcake', 'daifuku', 'shucream', 'purin', 'parfait'] },
+    { y: 1.26, d: 0.42, a: ['sekihan', 'shiomusubi', 'tunamayo', 'mentaiko', 'benishake'], b: ['tamago', 'katsu', 'mixsando', 'fruitsando', 'tamago', 'katsu'] },
+    { y: 0.92, d: 0.5, a: ['okaka', 'ume', 'konbu', 'shiomusubi', 'sekihan'], b: ['mixsando', 'fruitsando', 'rollcake', 'daifuku', 'tamago'] },
+    { y: 0.55, d: 0.75, a: ['karaage', 'makunouchi', 'noriben'], b: ['yakiniku', 'zarusoba', 'napolitan', 'karaage', 'noriben'] },
   ];
   for (const s of cShelves) {
     if (s.y > 0.6) addBox(g, [s.d, 0.02, cLen - 0.06], mats.shelfWhite, [cx + 0.04 + s.d / 2, s.y - 0.01, (cz0 + cz1) / 2], { cast: false });
-    stockRun(stocker, tags, s.ids, {
-      start: V(cx + 0.04 + s.d, s.y, cz1 - 0.03), along: V(0, 0, -1), inward: V(-1, 0, 0), length: cLen - 0.06, depth: s.d - 0.03, rotY: FACE.px, rows: s.rows || 3,
+    const run = (ids, z0, z1) => stockRun(stocker, tags, ids, {
+      start: V(cx + 0.04 + s.d, s.y, z0), along: V(0, 0, -1), inward: V(-1, 0, 0), length: z0 - z1, depth: s.d - 0.03, rotY: FACE.px, rows: s.y < 0.6 ? 3 : 2,
     });
+    run(s.a, cz1 - 0.03, split + 0.03);
+    run(s.b, split - 0.03, cz0 + 0.03);
   }
+  addBox(g, [0.8, 1.35, 0.02], std('#e9ebee', { roughness: 0.4 }), [cx + 0.42, 1.25, split], { cast: false });
   colliders.add(-6, cx + 0.9, cz0 - 0.03, cz1 + 0.03);
   hangingSign(g, w.onigiri, -5.2, 2.32, 0.6, FACE.px, { w: 1.3 });
-  hangingSign(g, w.obento, -5.2, 2.32, -2.0, FACE.px, { w: 1.3 });
+  hangingSign(g, w.obento, -5.2, 2.32, -0.9, FACE.px, { w: 1.3 });
+  hangingSign(g, w.pyonSweets, -5.2, 2.32, -2.5, FACE.px, { w: 1.3, bg: '#c86a7e' });
 
   // --- centre gondolas -----------------------------------------------------
-  const gz0 = -2.6, gz1 = 2.0, gLen = gz1 - gz0;
+  const gz0 = -2.2, gz1 = 2.0, gLen = gz1 - gz0;
   const gondolas = [
-    { x: -3.2, nx: [['kitsune', 'curryudon'], ['miso', 'shoyu'], ['shoyu', 'kitsune'], ['yakisoba', 'miso']],
-      px: [['kakinotane', 'ebisen'], ['chips-usushio', 'chips-norishio'], ['chips-norishio', 'chips-consomme'], ['gummy', 'ebisen', 'gummy']],
-      sign: w.kappumen },
-    { x: -0.8, nx: [['chips-consomme', 'chips-usushio'], ['pyonstick', 'matchachoco'], ['gummy', 'pyonstick', 'gummy'], ['matchachoco', 'dango']],
-      px: [['dango', 'dango'], ['pyonstick', 'gummy', 'pyonstick'], ['matchachoco', 'matchachoco'], ['kakinotane', 'ebisen']],
-      sign: w.okashi },
-    { x: 1.6, nx: [['mask', 'denchi'], ['hamigaki', 'denchi'], ['mask', 'hamigaki'], ['denchi', 'denchi']],
-      px: [['yakisoba', 'shoyu'], ['miso', 'curryudon'], ['gummy', 'pyonstick'], ['kitsune', 'shoyu']],
-      sign: w.nichiyohin },
+    { x: -3.2, sign: w.kappumen,
+      nx: [['kitsune', 'curryudon', 'tenpura', 'tonkotsu', 'shio', 'seafood', 'miso', 'shoyu'], ['shoyu', 'miso', 'shio', 'seafood', 'tonkotsu', 'kitsune', 'curryudon'], ['yakisoba', 'shoyu', 'tonkotsu', 'miso', 'tenpura', 'shio'], ['seafood', 'kitsune', 'curryudon', 'tenpura', 'shoyu', 'miso', 'shio']],
+      px: [['kakinotane', 'senbei', 'ebisen', 'popcorn', 'chips-select', 'chips-usushio'], ['chips-usushio', 'chips-norishio', 'chips-consomme', 'chips-select', 'ebisen', 'popcorn'], ['popcorn', 'senbei', 'kakinotane', 'chips-norishio', 'chips-consomme', 'ebisen'], ['gummy', 'gummy-budo', 'nodoame', 'caramel', 'gummy', 'gummy-budo', 'nodoame', 'caramel']] },
+    { x: -0.8, sign: w.okashi,
+      nx: [['cookie', 'biscuit', 'milkchoco', 'almondchoco', 'matchachoco', 'pyonstick', 'caramel'], ['pyonstick', 'matchachoco', 'almondchoco', 'milkchoco', 'cookie', 'biscuit', 'dango'], ['gummy', 'gummy-budo', 'nodoame', 'pyonstick', 'caramel', 'milkchoco', 'gummy'], ['dango', 'cookie', 'biscuit', 'matchachoco', 'almondchoco', 'dango']],
+      px: [['senbei', 'kakinotane', 'chips-select', 'ebisen', 'popcorn', 'senbei'], ['milkchoco', 'almondchoco', 'pyonstick', 'caramel', 'matchachoco', 'cookie', 'biscuit'], ['nodoame', 'gummy', 'gummy-budo', 'caramel', 'pyonstick', 'milkchoco', 'almondchoco'], ['biscuit', 'cookie', 'dango', 'matchachoco', 'milkchoco', 'pyonstick']] },
+    { x: 1.6, sign: w.nichiyohin,
+      nx: [['tissue', 'mask', 'bansoko', 'denchi', 'hamigaki', 'tissue', 'mask'], ['denchi', 'hamigaki', 'bansoko', 'tissue', 'mask', 'denchi'], ['mask', 'tissue', 'hamigaki', 'denchi', 'bansoko', 'mask', 'tissue'], ['hamigaki', 'bansoko', 'denchi', 'mask', 'tissue', 'hamigaki']],
+      px: [['yakisoba', 'shoyu', 'miso', 'seafood', 'tonkotsu', 'kitsune'], ['chips-select', 'kakinotane', 'popcorn', 'chips-norishio', 'senbei', 'ebisen'], ['pyonstick', 'gummy', 'cookie', 'almondchoco', 'caramel', 'nodoame', 'biscuit'], ['dango', 'matchachoco', 'milkchoco', 'gummy-budo', 'pyonstick', 'cookie']] },
   ];
   const levels = [0.12, 0.5, 0.88, 1.26];
   const gDepth = 0.4;
@@ -247,11 +266,11 @@ export function buildInterior(scene, mats, colliders) {
   }
   // endcaps facing the entrance (promo: moon-viewing dumplings for October)
   const ez = gz1 + 0.17;
-  for (const [x, ids] of [[-3.2, ['chips-usushio', 'chips-consomme']], [-0.8, ['dango']], [1.6, ['gummy', 'pyonstick']]]) {
+  for (const [x, ids] of [[-3.2, ['chips-select', 'chips-usushio']], [-0.8, ['dango', 'dango']], [1.6, ['pyonstick', 'gummy', 'cookie']]]) {
     addBox(g, [0.9, 0.12, 0.32], mats.shelfWhite, [x, 0.06, ez]);
     for (const y of [0.12, 0.55, 0.98]) {
       if (y > 0.2) addBox(g, [0.88, 0.02, 0.3], mats.shelfWhite, [x, y - 0.01, ez], { cast: false });
-      stockRun(stocker, tags, ids, { start: V(x - 0.43, y, ez + 0.15), along: V(1, 0, 0), inward: V(0, 0, -1), length: 0.86, depth: 0.28, rotY: FACE.pz, rows: 1, tagY: -0.03 });
+      stockRun(stocker, tags, ids, { start: V(x - 0.43, y, ez + 0.15), along: V(1, 0, 0), inward: V(0, 0, -1), length: 0.86, depth: 0.28, rotY: FACE.pz, rows: 1, tagY: -0.03, maxFacings: 3 });
     }
   }
   const promo = sign(w.kikanGentei, { w: 0.86, h: 0.22, bg: '#2b3140', fg: '#f2d675', res: 512 });
@@ -271,18 +290,18 @@ export function buildInterior(scene, mats, colliders) {
   addBox(g, [fW, 0.15, 0.04], std('#f2f4f6', { roughness: 0.35 }), [fzx, 0.88, fzz - fD / 2 + 0.02]);
   addBox(g, [0.04, 0.15, fD], std('#f2f4f6', { roughness: 0.35 }), [fzx - fW / 2 + 0.02, 0.88, fzz]);
   addBox(g, [0.04, 0.15, fD], std('#f2f4f6', { roughness: 0.35 }), [fzx + fW / 2 - 0.02, 0.88, fzz]);
-  stockRun(stocker, tags, ['vanilla', 'matchaice'], { start: V(fzx - 0.85, 0.82, fzz + 0.32), along: V(1, 0, 0), inward: V(0, 0, -1), length: 0.85, depth: 0.6, rotY: 0, rows: 6, tag: false, gap: 0.01 });
-  stockRun(stocker, tags, ['azuki', 'soda'], { start: V(fzx + 0.02, 0.82, fzz + 0.32), along: V(1, 0, 0), inward: V(0, 0, -1), length: 0.85, depth: 0.6, rotY: 0, rows: 3, tag: false, lie: true, gap: 0.01 });
-  for (const [x, id] of [[fzx - 0.62, 'vanilla'], [fzx - 0.2, 'matchaice'], [fzx + 0.22, 'azuki'], [fzx + 0.64, 'soda']]) {
+  stockRun(stocker, tags, ['vanilla', 'matchaice', 'chocoice'], { start: V(fzx - 0.85, 0.82, fzz + 0.32), along: V(1, 0, 0), inward: V(0, 0, -1), length: 0.85, depth: 0.6, rotY: 0, rows: 5, tag: false, gap: 0.012, maxFacings: 2 });
+  stockRun(stocker, tags, ['azuki', 'soda', 'monaka'], { start: V(fzx + 0.02, 0.82, fzz + 0.32), along: V(1, 0, 0), inward: V(0, 0, -1), length: 0.85, depth: 0.6, rotY: 0, rows: 3, tag: false, lie: true, gap: 0.012, maxFacings: 3 });
+  for (const [x, id] of [[fzx - 0.72, 'vanilla'], [fzx - 0.43, 'matchaice'], [fzx - 0.14, 'chocoice'], [fzx + 0.16, 'azuki'], [fzx + 0.45, 'soda'], [fzx + 0.74, 'monaka']]) {
     const t = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.05), priceTag(byId[id]));
     t.position.set(x, 0.86, fzz + fD / 2 + 0.002);
     g.add(t);
   }
   const iceSign = sign(w.aisu, { w: 0.9, h: 0.2, bg: '#5ac0f0', fg: '#fff', res: 512 });
-  iceSign.position.set(fzx, 0.58, fzz + fD / 2 + 0.003);
+  iceSign.position.set(fzx, 0.6, fzz + fD / 2 + 0.003);
   g.add(iceSign);
   const reitoSign = sign(w.reito, { w: 0.4, h: 0.14, bg: '#1d4f9c', fg: '#fff', res: 256 });
-  reitoSign.position.set(fzx + 0.6, 0.58, fzz + fD / 2 + 0.003);
+  reitoSign.position.set(fzx + 0.62, 0.38, fzz + fD / 2 + 0.003);
   g.add(reitoSign);
   colliders.rect(fzx, fzz, fW + 0.04, fD + 0.04);
 
@@ -412,5 +431,5 @@ export function buildInterior(scene, mats, colliders) {
   const products = stocker.build(byId);
   g.add(products);
 
-  return { group: g, products, lights };
+  return { group: g, products, lights, stocker };
 }
