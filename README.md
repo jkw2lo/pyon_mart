@@ -51,7 +51,7 @@ zoom, <kbd>F</kbd> to turn it over, <kbd>B</kbd> to add it to your basket,
   sign, windows, vending machines and street lights glow.
 - **~150 fictional products** with generated packaging, including store-brand lines
   (ぴょんセレクト, ぴょんカフェ, ぴょんスイーツ, ぴょんビューティー) that share one look.
-- **Over 280 words** to discover, each with hiragana, romaji and English. A word book
+- **Nearly 300 words** to discover, each with hiragana, romaji and English. A word book
   tracks the ones you've found.
 - **Checkout** — bring your basket to ぴょんさん at the register for the usual questions
   (温めますか？ 袋はご利用ですか？), with a printed receipt.
