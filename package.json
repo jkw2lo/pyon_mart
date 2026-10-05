@@ -1,7 +1,8 @@
 {
   "name": "pyon-mart",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "A walk-around 3D Japanese convenience store in the browser for practising reading Japanese.",
   "type": "module",
   "scripts": {
     "dev": "vite",
