@@ -24,7 +24,8 @@ function priceTag(def) {
   L.ctx.fillText(`¥${def.price}`, 200, 76);
   L.text(w.zeikomi, 228, 82, { size: 18, color: '#555', weight: 500 });
   L.text(def.note || '', 50, 110, { size: 16, color: '#777', weight: 500 });
-  const m = L.material({ roughness: 0.5 });
+  // pulled toward the camera in the depth buffer so it never fights the shelf rail
+  const m = L.material({ roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   tagCache.set(def.id, m);
   return m;
 }
@@ -63,7 +64,7 @@ function stockRun(stocker, tagParent, ids, { start, along, inward, length, depth
     }
     if (tag) {
       const t = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.05), priceTag(it.def));
-      const p = start.clone().addScaledVector(along, off + groupW / 2).addScaledVector(inward, -0.012);
+      const p = start.clone().addScaledVector(along, off + groupW / 2).addScaledVector(inward, -0.019);
       p.y += tagY;
       t.position.copy(p);
       t.rotation.y = rotY;
@@ -153,7 +154,7 @@ export function buildInterior(scene, mats, colliders) {
     lights.push(L);
   }
   // shadow-casting downlights over each aisle: products shade the shelves below them
-  for (const [x, z] of [[-4.4, -0.6], [-2.0, -0.2], [0.4, -0.2], [2.85, -0.2], [-1.0, -3.5], [2.0, -3.5]]) {
+  for (const [x, z] of [[-4.4, -0.6], [-2.0, -0.2], [0.4, -0.2], [2.85, -0.2], [-1.0, -3.0], [2.0, -3.0]]) {
     const S = new THREE.SpotLight('#f6f8ff', 21, 9, 1.25, 0.8, 1.4);
     S.position.set(x, 2.66, z);
     S.target.position.set(x, 0, z + 0.01);
@@ -179,18 +180,20 @@ export function buildInterior(scene, mats, colliders) {
   glass.userData.noHit = true;
   addBox(g, [fx1 - fx0, 0.05, 0.05], mats.darkMetal, [(fx0 + fx1) / 2, 2.2, fz]);
   addBox(g, [fx1 - fx0, 0.05, 0.05], mats.darkMetal, [(fx0 + fx1) / 2, 0.17, fz]);
+  // drinks on the left, then dairy, a little grocery section, more drinks, alcohol
   const sections = [
     [['ryokucha', 'koicha', 'hojicha', 'genmaicha'], ['ryokucha', 'koicha', 'hojicha'], ['genmaicha', 'mugicha', 'jasmine'], ['kocha', 'milktea', 'jasmine'], ['mugicha', 'ryokucha', 'hojicha']],
     [['tennensui', 'tansansui', 'sports'], ['orange', 'ringo', 'budo'], ['sports', 'tennensui', 'tansansui'], ['ringo', 'budo', 'orange'], ['tennensui', 'mugicha', 'sports']],
     [['bito', 'black', 'milkcoffee', 'cafelatte'], ['black', 'bito', 'cafelatte', 'milkcoffee'], ['milkcoffee', 'cafelatte', 'bito', 'black'], ['cafelatte', 'black', 'milkcoffee', 'bito'], ['bito', 'milkcoffee', 'black', 'cafelatte']],
     [['ramune', 'cola', 'melonsoda'], ['cider', 'genki', 'ramune'], ['cola', 'melonsoda', 'cider'], ['genki', 'ramune', 'cola'], ['melonsoda', 'cider', 'genki']],
     [['gyunyu', 'ichigo', 'coffeemilk'], ['cafeaulait', 'tonyu', 'yogurt'], ['ichigo', 'gyunyu', 'coffeemilk'], ['yogurt', 'tonyu', 'cafeaulait'], ['gyunyu', 'yogurt', 'ichigo']],
-    [['koicha', 'kocha', 'milktea'], ['jasmine', 'genmaicha', 'ryokucha'], ['hojicha', 'mugicha', 'koicha'], ['milktea', 'kocha', 'jasmine'], ['ryokucha', 'genmaicha', 'hojicha']],
-    [['cafelatte', 'bito', 'black', 'milkcoffee'], ['cola', 'ramune', 'genki'], ['cider', 'melonsoda', 'cola'], ['budo', 'orange', 'ringo'], ['tansansui', 'tennensui', 'sports']],
+    [['yogurt-cup', 'butter', 'cheese'], ['cheese', 'yogurt-cup', 'butter'], ['yogurt-cup', 'cheese', 'yogurt-cup'], ['butter', 'cheese', 'butter'], ['gyunyu', 'tonyu', 'cafeaulait']],
+    [['eggs', 'eggs'], ['tofu-kinu', 'tofu-momen', 'natto'], ['natto', 'tofu-kinu', 'tofu-momen'], ['eggs', 'natto'], ['salad', 'cutfruit', 'salad']],
+    [['ham', 'uinna', 'ham'], ['kimchi', 'mayo', 'ketchup'], ['salad', 'cutfruit', 'salad'], ['uinna', 'ham', 'kimchi'], ['mayo', 'ketchup', 'mayo']],
+    [['koicha', 'kocha', 'milktea'], ['jasmine', 'genmaicha', 'ryokucha'], ['orange', 'ringo', 'budo'], ['sports', 'tennensui', 'tansansui'], ['genki', 'cola', 'cider']],
     [['beer', 'lemonsour', 'highball'], ['highball', 'beer', 'lemonsour'], ['lemonsour', 'highball', 'beer'], ['beer', 'lemonsour', 'highball'], ['highball', 'beer', 'lemonsour']],
-    [['beer', 'highball', 'lemonsour'], ['lemonsour', 'beer', 'highball'], ['beer', 'lemonsour', 'highball'], ['highball', 'lemonsour', 'beer'], ['beer', 'highball', 'lemonsour']],
-    [['genki', 'cola', 'cider'], ['tennensui', 'sports', 'tansansui'], ['ryokucha', 'koicha', 'mugicha'], ['orange', 'ringo', 'budo'], ['gyunyu', 'ichigo', 'yogurt']],
   ];
+
   const shelfYs = [1.72, 1.35, 0.98, 0.61, 0.24];
   for (let d = 0; d < nDoors; d++) {
     const x0 = fx0 + d * dw;
@@ -214,12 +217,18 @@ export function buildInterior(scene, mats, colliders) {
     });
   }
   colliders.add(fx0 - 0.1, fx1 + 0.06, -5, -4.08);
-  const drinksSign = sign(w.nomimono, { w: 2.2, h: 0.36, bg: '#3a4150', fg: '#fff', res: 512 });
-  drinksSign.position.set(-1.2, 2.45, -4.095);
-  g.add(drinksSign);
-  const coldSign = sign(w.tsumetai, { w: 1.1, h: 0.26, bg: '#2a6ad0', fg: '#fff', res: 512 });
-  coldSign.position.set(1.8, 2.45, -4.095);
-  g.add(coldSign);
+  // section headers along the fridge bank
+  const header = (word, x, wdt, bg = '#3a4150') => {
+    const m = sign(word, { w: wdt, h: 0.3, bg, fg: '#fff', res: 512 });
+    m.position.set(x, 2.45, -4.095);
+    g.add(m);
+  };
+  const doorX = (d) => fx0 + d * dw + dw / 2;
+  header(w.nomimono, (doorX(0) + doorX(3)) / 2, 2.0);
+  header(w.nyuseihin, (doorX(4) + doorX(5)) / 2, 1.3, '#2a6ad0');
+  header(w.shokuryohin, (doorX(6) + doorX(7)) / 2, 1.3, '#2a8a3a');
+  header(w.tsumetai, doorX(8), 0.8, '#2a6ad0');
+  header(w.osake, doorX(9), 0.7, '#a3320b');
   // staff door
   addBox(g, [1.0, 2.1, 0.05], std('#c8ccd2', { roughness: 0.5 }), [5.0, 1.05, -4.96]);
   const staff = new Label(256, 64).fill('#3a4150');

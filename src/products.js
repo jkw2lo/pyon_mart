@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Label, FONTS, canvasTex } from './label.js';
+import { Label, FONTS, canvasTex, shown } from './label.js';
 import { drawArt, drawMark } from './art.js';
 
 // Builds a product as a small Group (origin at the bottom centre, front facing +z)
@@ -130,10 +130,10 @@ function design(L, def, x, y, w, h, { compact = false } = {}) {
   if (vertical) {
     L.text(def.brand, cx, y + h * 0.075, { size: Math.min(h * 0.06, w * 0.1), color: def.fg, font: FONTS.mincho, maxW: w * 0.86 });
     if (art) drawArt(c, def.art, x + w * 0.24, y + h * 0.78, Math.min(w, h) * 0.28, def.artColors);
-    const n = [...def.title.jp].length;
+    const n = [...shown(def.title)].length;
     const size = Math.min(w * 0.36, (h * 0.66) / n);
     L.vtext(def.title, cx + w * 0.06, y + h * 0.15, { size, color: def.fg, font: FONTS.mincho });
-    if (def.sub) L.vtext(def.sub, x + w * 0.84, y + h * 0.18, { size: Math.min(w * 0.09, (h * 0.5) / [...def.sub.jp].length), color: def.fg, font: FONTS.gothic, weight: 500 });
+    if (def.sub) L.vtext(def.sub, x + w * 0.84, y + h * 0.18, { size: Math.min(w * 0.09, (h * 0.5) / [...shown(def.sub)].length), color: def.fg, font: FONTS.gothic, weight: 500 });
     if (def.note) L.text(def.note, x + w * 0.2, y + h * 0.94, { size: h * 0.045, color: def.fg, weight: 500 });
     return;
   }
@@ -399,32 +399,71 @@ function onigiri(def) {
   return g;
 }
 
+// Konbini sando: two triangle halves standing on their crust, cut face toward
+// you so the bread | filling | bread layers show, in a clear wedge pack.
 function sandwich(def) {
   const g = new THREE.Group();
-  const side = 0.13, depth = 0.06;
-  const { shape, h } = roundedTriangle(side, 0.008);
-  const crust = new THREE.MeshPhysicalMaterial({ color: '#efe0bf', roughness: 0.7, clearcoat: 1, clearcoatRoughness: 0.15 });
-  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false }), crust);
-  body.position.set(0, h * 0.38, -depth / 2);
-  g.add(body);
-  const L = triangleLabel(side, h, (L, c) => {
-    c.fillStyle = '#f7ecd2';
-    c.fillRect(0, 0, L.w, L.h);
-    c.fillStyle = '#e8d6b0';
-    c.fillRect(0, 0, L.w, L.h * 0.04);
-    c.fillStyle = def.filling;
-    c.fillRect(0, L.h * 0.4, L.w, L.h * 0.2);
-    if (def.fruit) for (let i = 0; i < 6; i++) { c.fillStyle = ['#e8344f', '#ffb03a', '#7ac04a'][i % 3]; c.beginPath(); c.arc(L.w * (0.25 + i * 0.1), L.h * 0.5, L.h * 0.06, 0, TAU); c.fill(); }
-    c.fillStyle = '#ead9b0';
-    for (let i = 0; i < 160; i++) c.fillRect(Math.random() * L.w, Math.random() * L.h, 3, 3);
-    const sx = L.w * 0.27, sy = L.h * 0.66, sw = L.w * 0.46, sh = L.h * 0.3;
-    L.rect(sx, sy, sw, sh, '#ffffff', 8);
-    design(L, def, sx, sy, sw, sh, { compact: true });
-  });
-  const plane = new THREE.Mesh(new THREE.PlaneGeometry(side, h), L.material({ transparent: true, alphaTest: 0.05, roughness: 0.22 }));
-  plane.position.set(0, h / 2, depth / 2 + 0.0008);
-  g.add(plane);
+  const leg = 0.105;                        // the two crust edges (back and bottom)
+  const tri = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(leg, 0), new THREE.Vector2(0, leg)]);
+  // shape is drawn in (z-back, y-up); the hypotenuse faces front-up
+  const bread = new THREE.MeshStandardMaterial({ color: '#f7f0df', roughness: 0.9 });
+  const crust = new THREE.MeshStandardMaterial({ color: '#d9a866', roughness: 0.85 });
+  const fill = new THREE.MeshStandardMaterial({ color: def.filling, roughness: 0.7 });
+  const layer = (depth, mat, x) => {
+    const m = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth, bevelEnabled: true, bevelSize: 0.002, bevelThickness: 0.0015, bevelSegments: 2 }), mat);
+    // turn so the slices stack along x, the right angle sits at the back and the
+    // sloping cut face looks toward the shopper (+z)
+    m.rotation.y = -Math.PI / 2;
+    m.position.set(x + depth, 0.006, -leg / 2);
+    return m;
+  };
+  const halves = new THREE.Group();
+  const bw = 0.013, fw = def.fruit ? 0.017 : 0.012;
+  const fills = [];
+  let x = -0.06;
+  for (let h = 0; h < 2; h++) {
+    halves.add(layer(bw, bread, x)); x += bw + 0.002;
+    halves.add(layer(fw, fill, x)); fills.push(x + fw / 2); x += fw + 0.002;
+    halves.add(layer(bw, bread, x)); x += bw + 0.008;
+  }
+  addCrust(halves, crust, leg, -0.06, x - 0.008);
+  if (def.fruit) {
+    // strawberry, mandarin and kiwi peeking out of the cream on the cut face
+    fills.forEach((fx, k) => [0.28, 0.52, 0.76].forEach((u, i) => {
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.008, 12, 10), new THREE.MeshStandardMaterial({ color: ['#e8344f', '#ffb03a', '#7ac04a'][(i + k) % 3], roughness: 0.35 }));
+      f.position.set(fx, 0.006 + leg * (1 - u) - 0.004, -leg / 2 + leg * u - 0.004);
+      halves.add(f);
+    }));
+  }
+  g.add(halves);
+  // clear wedge pack
+  const packShape = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(leg + 0.014, 0), new THREE.Vector2(0, leg + 0.014)]);
+  const pack = new THREE.Mesh(new THREE.ExtrudeGeometry(packShape, { depth: 0.13, bevelEnabled: false }), clearPlastic());
+  pack.rotation.y = -Math.PI / 2;
+  pack.position.set(0.064, 0, -leg / 2 - 0.006);
+  pack.userData.noHit = true;
+  g.add(pack);
+  // the sticker sits on the sloping lid
+  const sw = 0.078, sh = 0.036;
+  const L = new Label(512, 256);
+  L.rect(0, 0, 512, 256, '#ffffff', 18);
+  design(L, def, 8, 8, 496, 240, { compact: true });
+  const sticker = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), L.material({ roughness: 0.3 }));
+  const slope = Math.PI / 4;
+  sticker.position.set(0, 0.08, -0.016);
+  sticker.rotation.x = -slope;
+  g.add(sticker);
   return g;
+}
+
+function addCrust(parent, mat, leg, x0, x1) {
+  const w = x1 - x0;
+  const back = new THREE.Mesh(new THREE.BoxGeometry(w, leg, 0.005), mat);
+  back.position.set((x0 + x1) / 2, 0.006 + leg / 2, -leg / 2 + 0.002);
+  parent.add(back);
+  const bottom = new THREE.Mesh(new THREE.BoxGeometry(w, 0.005, leg), mat);
+  bottom.position.set((x0 + x1) / 2, 0.006, 0.002);
+  parent.add(bottom);
 }
 
 function drawFood(c, kind, x, y, w, h) {
@@ -666,7 +705,7 @@ function bottle(def) {
 // Squeeze tube standing on its cap, flattening toward the crimped end.
 function tube(def) {
   const g = new THREE.Group();
-  const h = def.small ? 0.1 : 0.15, r = def.small ? 0.017 : 0.022;
+  const h = def.small ? 0.1 : def.big ? 0.18 : 0.15, r = def.small ? 0.017 : def.big ? 0.03 : 0.022;
   const geo = new THREE.CylinderGeometry(r, r, h, 40, 12, true, Math.PI);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
@@ -1110,7 +1149,38 @@ function umbrella(def) {
   return g;
 }
 
+
+// Six eggs in a clear pack, with the paper label tucked under the lid.
+function eggs(def) {
+  const g = new THREE.Group();
+  const w = 0.16, d = 0.105, h = 0.06;
+  const tray = new THREE.Mesh(new THREE.BoxGeometry(w, 0.025, d), new THREE.MeshStandardMaterial({ color: '#e8eef2', roughness: 0.2, transparent: true, opacity: 0.55 }));
+  tray.position.y = 0.0125;
+  g.add(tray);
+  const shell = new THREE.MeshStandardMaterial({ color: '#efd6b8', roughness: 0.55 });
+  const egg = new THREE.SphereGeometry(0.021, 18, 14);
+  for (let i = 0; i < 6; i++) {
+    const e = new THREE.Mesh(egg, shell);
+    e.scale.set(1, 1.3, 1);
+    e.position.set(-0.05 + (i % 3) * 0.05, 0.03, (i < 3 ? -1 : 1) * 0.026);
+    g.add(e);
+  }
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.025, d), clearPlastic());
+  lid.position.y = 0.025 + (h - 0.025) / 2;
+  lid.userData.noHit = true;
+  g.add(lid);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.9, d * 0.55), flatLabel(def, w * 0.9, d * 0.55).material({ roughness: 0.5 }));
+  top.rotation.x = -Math.PI / 2;
+  top.position.y = h + 0.001;
+  g.add(top);
+  const band = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.9, 0.022), flatLabel(def, w * 0.9, 0.022, { compact: true }).material());
+  band.position.set(0, 0.013, d / 2 + 0.001);
+  g.add(band);
+  return g;
+}
+
 const BUILDERS = {
+  eggs,
   bottle, tube, pump, card, magazine, umbrella, lipstick, wand, polish, compact, jar, dropper, spray, pouch,
   pet, can, carton, onigiri, sandwich, bento, bag, box, cup, tray, dessert,
   icecup: (d) => cup(d, { rt: 0.043, rb: 0.036, h: 0.058 }),

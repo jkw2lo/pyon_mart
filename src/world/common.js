@@ -128,7 +128,7 @@ export function makeMaterials() {
     concrete: std('#a9a7a1', { roughness: 0.95 }),
     white: std('#ffffff', { roughness: 0.6 }),
     glass: new THREE.MeshStandardMaterial({ color: '#cfe3ea', roughness: 0.04, metalness: 0.1, transparent: true, opacity: 0.16, depthWrite: false, envMapIntensity: 1.5 }),
-    fridgeGlass: new THREE.MeshStandardMaterial({ color: '#dceef2', roughness: 0.03, metalness: 0.1, transparent: true, opacity: 0.1, depthWrite: false, envMapIntensity: 1.5 }),
+    fridgeGlass: new THREE.MeshStandardMaterial({ color: '#dceef2', roughness: 0.03, metalness: 0, transparent: true, opacity: 0.06, depthWrite: false, envMapIntensity: 0.35, specularIntensity: 0.4 }),
     lightPanel: new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#f4f8ff', emissiveIntensity: 3 }),
     fridgeLight: new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#eef6ff', emissiveIntensity: 0.85 }),
     paint: std('#f4f4f0', { roughness: 0.6 }),

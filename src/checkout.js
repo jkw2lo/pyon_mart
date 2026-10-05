@@ -1,5 +1,5 @@
 import { words as w } from './data/words.js';
-import { allWords } from './label.js';
+import { allWords, shown } from './label.js';
 import { logoBadge } from './logo.js';
 
 // Words that only appear in the UI still count toward the word book.
@@ -13,7 +13,7 @@ const bagWord = { jp: 'レジ袋', kana: 'れじぶくろ', romaji: 'reji-bukuro
 allWords.set(bagWord.jp, bagWord);
 
 // A hoverable bit of Japanese inside HTML.
-export const jp = (word) => `<span class="jpw" data-jp="${word.jp}">${word.jp}</span>`;
+export const jp = (word) => `<span class="jpw" data-jp="${word.jp}">${shown(word)}</span>`;
 
 const $ = (s) => document.querySelector(s);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));

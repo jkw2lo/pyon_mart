@@ -253,6 +253,21 @@ export const products = [
   { id: 'gum', shape: 'box', cat: 'snack', price: 140, dims: [0.08, 0.05, 0.02], style: 'pop', brand: w.manmaru, bg: '#3ac0a0', fg: '#ffffff', accent: '#1d6a5a', art: 'sparkle', artColors: ['#ffffff'], title: w.gum, sub: w.mint },
   { id: 'cornsoup', shape: 'box', cat: 'noodle', price: 258, dims: [0.13, 0.11, 0.05], ...SEL, fg: '#a07a1a', accent: '#f2d23a', art: 'bowl', artColors: ['#f2d23a', '#f6e08a'], title: w.cornSoup, sub: w.oyuIrete },
   { id: 'cheesecake', shape: 'tray', cat: 'sweets', price: 280, ...SWEETS, fg: '#a3502a', accent: '#f6d47a', art: 'pudding', artColors: ['#f6e0a0', '#c48a3a'], title: w.cheesecake, sub: w.noko, dims: [0.11, 0.06, 0.09] },
+  // ===== Groceries (fridge) ===================================================
+  { id: 'eggs', shape: 'eggs', cat: 'grocery', price: 298, ...SEL, fg: '#a3502a', accent: '#f2c27a', title: w.egg, sub: w.rokkoIri },
+  { id: 'tofu-kinu', shape: 'tray', cat: 'grocery', price: 98, ...SEL, fg: '#2a5aa0', accent: '#a8c8f0', art: 'box', artColors: ['#ffffff', '#e8eef6'], title: w.tofu, sub: w.kinugoshi, dims: [0.12, 0.05, 0.09] },
+  { id: 'tofu-momen', shape: 'tray', cat: 'grocery', price: 98, style: 'tea', brand: w.tsukimiChaya, bg: '#f4efe2', fg: '#3a5a2a', accent: '#a8c08a', art: 'box', artColors: ['#fbf6ea', '#e8dcc0'], title: w.tofu, sub: w.momen, dims: [0.12, 0.05, 0.09] },
+  { id: 'natto', shape: 'box', cat: 'grocery', price: 108, dims: [0.09, 0.07, 0.085], top: true, style: 'pop', brand: w.hinode, bg: '#f2d23a', fg: '#7a3a10', accent: '#c4302b', art: 'seeds', artColors: ['#c49a5a', '#8a6a3a'], title: w.natto, sub: w.sanko },
+  { id: 'yogurt-cup', shape: 'icecup', cat: 'grocery', price: 168, style: 'clean', brand: w.shirousagi, bg: '#ffffff', fg: '#2a5aa0', accent: '#a8c8f0', title: w.yogurt, sub: w.plain },
+  { id: 'butter', shape: 'box', cat: 'grocery', price: 398, dims: [0.1, 0.045, 0.07], top: true, style: 'clean', brand: w.shirousagi, bg: '#f6e8a8', fg: '#1d4f9c', accent: '#f2c23a', art: 'milk', artColors: ['#f2d675'], title: w.butter, sub: w.hokkaido },
+  { id: 'cheese', shape: 'box', cat: 'grocery', price: 258, dims: [0.11, 0.022, 0.11], top: true, style: 'pop', brand: w.shirousagi, bg: '#ffd23a', fg: '#c4302b', accent: '#ffffff', art: 'box', artColors: ['#f6d06a', '#ffe8a0'], title: w.cheese, sub: w.shinsen },
+  { id: 'ham', shape: 'tray', cat: 'grocery', price: 198, ...SEL, fg: '#c4302b', accent: '#f2a0a0', art: 'fish', artColors: ['#f2a0a8'], title: w.ham, sub: w.hitorimae, dims: [0.14, 0.025, 0.1] },
+  { id: 'uinna', shape: 'bag', size: 'small', cat: 'grocery', price: 298, style: 'pop', brand: w.hinode, bg: '#c4302b', fg: '#ffffff', accent: '#ffd23a', art: 'sticks', artColors: ['#c4602b'], title: w.uinna, sub: w.arabiki },
+  { id: 'kimchi', shape: 'jar', cat: 'grocery', price: 328, style: 'pop', brand: w.hinode, bg: '#d0201b', fg: '#ffffff', accent: '#2a8a3a', title: w.kimchi, sub: w.pirikara },
+  { id: 'salad', shape: 'dessert', cat: 'grocery', price: 298, ...SEL, fg: '#2a6a2a', accent: '#8ac06a', fill: '#7ab84a', top: '#c4e88a', title: w.salad, sub: w.yasai },
+  { id: 'cutfruit', shape: 'dessert', cat: 'grocery', price: 358, ...SWEETS, fg: '#c4502b', accent: '#ffb03a', fill: '#ffd06a', top: '#e8344f', title: w.cutFruit, sub: w.shinsen },
+  { id: 'mayo', shape: 'tube', cat: 'grocery', price: 248, note: '350g', style: 'pop', brand: w.hinode, bg: '#f6f2e6', fg: '#c4302b', accent: '#c4302b', art: 'drop', artColors: ['#f6e8b0', '#c4302b'], title: w.mayo, sub: w.kokusan, big: true },
+  { id: 'ketchup', shape: 'tube', cat: 'grocery', price: 228, note: '300g', style: 'pop', brand: w.hinode, bg: '#d0201b', fg: '#ffffff', accent: '#2a8a3a', art: 'fruit', artColors: ['#ff4a3a', '#2a8a3a'], title: w.ketchup, sub: w.kokusan, big: true },
 ];
 
 for (const p of products) {

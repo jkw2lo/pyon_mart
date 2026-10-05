@@ -7,7 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { words } from './data/words.js';
 import { byId, products } from './data/products.js';
-import { allWords, wordAt } from './label.js';
+import { allWords, wordAt, kanaMode, shown } from './label.js';
 import { preloadBrandArt } from './art.js';
 import { productTemplate } from './products.js';
 import { makeMaterials, Colliders } from './world/common.js';
@@ -26,13 +26,19 @@ const $ = (s) => document.querySelector(s);
 
 // --- fonts + brand art first: labels are drawn onto canvases ---------------------
 async function loadFonts() {
-  const text = [...new Set(Object.values(words).map((w) => w.jp).join('') + 'PYONMART0123456789¥')].join('');
+  const text = [...new Set(Object.values(words).map((w) => w.jp + w.kana).join('') + 'PYONMART0123456789¥｜')].join('');
   const faces = ['700 40px "Noto Sans JP"', '800 40px "Noto Sans JP"', '500 40px "Noto Sans JP"', '700 40px "Zen Maru Gothic"',
     '700 40px "Noto Serif JP"', '400 40px "Mochiy Pop One"', '800 40px "M PLUS Rounded 1c"'];
   const all = Promise.all(faces.map((f) => document.fonts.load(f, text).catch(() => {})));
   await Promise.race([all, new Promise((r) => setTimeout(r, 6000))]);
 }
 
+// static UI Japanese follows the practice mode too
+if (kanaMode) {
+  for (const el of document.querySelectorAll('.jp, h2')) {
+    el.innerHTML = el.innerHTML.replace('言葉帳', 'ことばちょう').replace('言葉', 'ことば').replace('かご', 'かご').replace('レジ', 'れじ');
+  }
+}
 $('#start-logo').innerHTML = logoLockup({ width: 560, dark: true });
 $('#mini-logo').innerHTML = logoBadge({ size: 44 });
 
@@ -60,7 +66,8 @@ const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, sample
 const composer = new EffectComposer(renderer, rt);
 composer.addPass(new RenderPass(scene, camera));
 const gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
-gtao.updateGtaoMaterial({ radius: 0.5, distanceExponent: 1.6, thickness: 1.5, scale: 1.15, samples: 8 });
+gtao.updateGtaoMaterial({ radius: 0.4, distanceExponent: 1.6, thickness: 1.5, scale: 1.1, samples: 12 });
+gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 8, rings: 2, samples: 16 });
 gtao.blendIntensity = 1.0;
 composer.addPass(gtao);
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.3, 0.3, 3.5);
@@ -82,6 +89,22 @@ const ext = buildExterior(scene, mats, colliders);
 const int = buildInterior(scene, mats, colliders);
 const decor = buildDecor(scene, mats, colliders, ext);
 const details = buildDetails(scene);
+
+// The AO pass draws its own depth/normal buffer; transparent glass in there makes it
+// shade *through* fridge doors and windows. Hide see-through surfaces from that pass.
+{
+  const seeThrough = [];
+  const isClear = (m) => m && m.transparent && (m.opacity ?? 1) < 0.6;
+  scene.traverse((o) => {
+    if (!o.isMesh) return;
+    const ms = Array.isArray(o.material) ? o.material : [o.material];
+    if (ms.every(isClear)) seeThrough.push(o);
+  });
+  gtao._overrideVisibility = function () {
+    for (const o of seeThrough) if (o.visible) { o.visible = false; this._visibilityCache.push(o); }
+    this.scene.traverse((o) => { if ((o.isPoints || o.isLine) && o.visible) { o.visible = false; this._visibilityCache.push(o); } });
+  };
+}
 const env = createEnvironment(scene, renderer);
 
 // Capture the shop interior once and use it for reflections on the floor, glass and metal.
@@ -93,7 +116,7 @@ const env = createEnvironment(scene, renderer);
   renderer.shadowMap.needsUpdate = true;
   cubeCam.update(renderer, scene);
   const interiorEnv = pmrem.fromCubemap(cubeRT.texture).texture;
-  for (const m of [mats.floor, mats.fridgeGlass, mats.aluminium, mats.shelfEdge, mats.shelfWhite]) {
+  for (const m of [mats.floor, mats.aluminium, mats.shelfEdge, mats.shelfWhite]) {
     m.envMap = interiorEnv;
     m.envMapIntensity = m === mats.floor ? 0.9 : 0.7;
     m.needsUpdate = true;
@@ -115,7 +138,7 @@ function collect(word) {
   found.add(word.jp);
   try { localStorage.setItem('pyon-words', JSON.stringify([...found])); } catch { /* not persisted */ }
   updateWordCount();
-  toast(`<span class="jp">新しい言葉</span> · ${word.jp} (${word.romaji})`);
+  toast(`<span class="jp">${kanaMode ? 'あたらしいことば' : '新しい言葉'}</span> · ${shown(word)} (${word.romaji})`);
   audio.blip();
 }
 let toastTimer;
@@ -133,8 +156,10 @@ let tipWord = null, tipTimer = 0;
 function showTip(word, x, y) {
   if (!word) { tip.classList.add('hidden'); tipWord = null; return; }
   if (tipWord !== word) {
-    tip.querySelector('.tt-jp').textContent = word.jp;
-    tip.querySelector('.tt-kana').textContent = word.kana === word.jp ? '' : word.kana;
+    // in hiragana practice mode the kana leads and the usual spelling sits underneath
+    tip.querySelector('.tt-jp').textContent = shown(word);
+    const other = kanaMode ? word.jp : word.kana;
+    tip.querySelector('.tt-kana').textContent = other === shown(word) ? '' : (kanaMode ? `usually written ${other}` : other);
     tip.querySelector('.tt-romaji').textContent = word.romaji;
     tip.querySelector('.tt-en').textContent = word.en;
     tipWord = word;
@@ -161,11 +186,11 @@ function openInspect(id, index = null) {
   inspector.open(def);
   $('#inspect').classList.remove('hidden');
   $('#hud').classList.add('hidden');
-  $('.ip-brand').textContent = def.brand.jp;
-  $('.ip-title').textContent = def.title.jp;
-  $('.ip-reading').textContent = `${def.title.kana} · ${def.title.romaji}`;
+  $('.ip-brand').textContent = shown(def.brand);
+  $('.ip-title').textContent = shown(def.title);
+  $('.ip-reading').textContent = kanaMode ? `${def.title.romaji}${def.title.jp !== def.title.kana ? ` · usually ${def.title.jp}` : ''}` : `${def.title.kana} · ${def.title.romaji}`;
   $('.ip-en').textContent = def.title.en[0].toUpperCase() + def.title.en.slice(1) + (def.sub ? ` — ${def.sub.en}` : '');
-  $('.ip-price').innerHTML = `¥${def.price}<small>税込 (tax incl.)</small>`;
+  $('.ip-price').innerHTML = `¥${def.price}<small>${shown(words.zeikomi)} (tax incl.)</small>`;
   collect(def.title);
   audio.rustle();
 }
@@ -192,7 +217,7 @@ function addToBasket() {
   const { def } = inspecting;
   basket.push(def);
   updateBasket();
-  toast(`<span class="jp">${def.title.jp}</span> added to your basket`);
+  toast(`<span class="jp">${shown(def.title)}</span> added to your basket`);
   closeInspect(true);
   tips.basketed = true;
 }
@@ -233,7 +258,7 @@ function togglePopover(id) {
 }
 $('#basket-btn').onclick = () => { updateBasket(); togglePopover('#basket-panel'); };
 $('#settings-btn').onclick = () => togglePopover('#settings-panel');
-const settings = { sens: 1, invert: false, vol: 0.8, tips: true, quality: 'high' };
+const settings = { sens: 1, invert: false, vol: 0.8, tips: true, quality: 'high', script: 'normal' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('pyon-settings') || '{}')); } catch { /* defaults */ }
 function applySettings() {
   player.lookScale = settings.sens;
@@ -244,6 +269,7 @@ function applySettings() {
   $('#set-vol').value = settings.vol;
   $('#set-tips').checked = settings.tips;
   $('#set-quality').value = settings.quality;
+  $('#set-script').value = settings.script;
   applyQuality(settings.quality);
   try { localStorage.setItem('pyon-settings', JSON.stringify(settings)); } catch { /* not saved */ }
 }
@@ -252,6 +278,13 @@ $('#set-invert').onchange = (e) => { settings.invert = e.target.checked; applySe
 $('#set-vol').oninput = (e) => { settings.vol = +e.target.value; applySettings(); };
 $('#set-tips').onchange = (e) => { settings.tips = e.target.checked; applySettings(); };
 $('#set-quality').onchange = (e) => { settings.quality = e.target.value; applySettings(); };
+$('#set-script').onchange = (e) => {
+  settings.script = e.target.value;
+  applySettings();
+  // every label in the shop is printed once at load, so reprint by reloading
+  toast(settings.script === 'kana' ? 'Reprinting the shop in hiragana…' : 'Reprinting the shop…');
+  setTimeout(() => location.reload(), 600);
+};
 
 // Graphics presets. High: everything. Balanced: no ambient occlusion, fewer shadow
 // lights, lower resolution. Low: no post effects and no interior shadows.
@@ -313,7 +346,7 @@ function updateTips(dt) {
       msg = 'Hover over any Japanese text to see how it’s read · click a product to pick it up';
       if ((tips.insideT = (tips.insideT || 0) + dt) > 9) { tips.inside = true; saveTips(); }
     } else if (basket.length && !tips.checkedOut) {
-      msg = 'When you’re done, take your basket to the <span class="jp">レジ</span> (register) and click the clerk';
+      msg = `When you’re done, take your basket to the <span class="jp">${shown(words.reji)}</span> (register) and click the clerk`;
     }
   }
   el.innerHTML = msg;
@@ -336,8 +369,8 @@ function toggleWordbook(force) {
     $('#wb-list').innerHTML = [...allWords.values()]
       .sort((a, b) => found.has(b.jp) - found.has(a.jp))
       .map((w) => found.has(w.jp)
-        ? `<div class="wb-item"><div class="j">${w.jp}</div><div class="k">${w.kana} · ${w.romaji}</div><div class="e">${w.en}</div></div>`
-        : `<div class="wb-item locked"><div class="j">${'？'.repeat(Math.min(5, [...w.jp].length))}</div><div class="k">not found yet</div></div>`)
+        ? `<div class="wb-item"><div class="j">${shown(w)}</div><div class="k">${kanaMode ? (w.jp !== w.kana ? w.jp + ' · ' : '') : w.kana + ' · '}${w.romaji}</div><div class="e">${w.en}</div></div>`
+        : `<div class="wb-item locked"><div class="j">${'？'.repeat(Math.min(5, [...shown(w)].length))}</div><div class="k">not found yet</div></div>`)
       .join('');
   } else if (!inspecting) {
     player.enabled = true;

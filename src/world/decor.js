@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { addBox, std, sign } from './common.js';
-import { Label, FONTS } from '../label.js';
+import { Label, FONTS, shown } from '../label.js';
 import { drawArt, brandArt } from '../art.js';
 import { words as w } from '../data/words.js';
 
@@ -86,7 +86,7 @@ function noboriFlag(word, bg, fg) {
   const L = new Label(160, 640).fill(bg);
   L.rect(0, 0, 160, 40, fg);
   L.rect(0, 600, 160, 40, fg);
-  const n = [...word.jp].length;
+  const n = [...shown(word)].length;
   L.vtext(word, 80, 70, { size: Math.min(110, 520 / n), color: fg, font: FONTS.pop });
   const geo = new THREE.PlaneGeometry(0.45, 1.8, 6, 12);
   const m = new THREE.Mesh(geo, L.material({ roughness: 0.8, side: THREE.DoubleSide }));

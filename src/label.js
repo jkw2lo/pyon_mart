@@ -10,6 +10,14 @@ export const FONTS = {
   pop: '"Mochiy Pop One", "Zen Maru Gothic", sans-serif',
 };
 
+// Practice mode: print every word in hiragana instead of kanji/katakana. Read once
+// at startup (changing it reloads the shop so all the labels get reprinted).
+export const kanaMode = (() => {
+  try { return JSON.parse(localStorage.getItem('pyon-settings') || '{}').script === 'kana'; } catch { return false; }
+})();
+// The form of a word that should appear on screen.
+export const shown = (t) => (typeof t === 'string' ? t : kanaMode ? t.kana : t.jp);
+
 // Every word that has been drawn somewhere in the world (for the collection count).
 export const allWords = new Map();
 
@@ -51,7 +59,7 @@ export class Label {
   // Draw text horizontally. `t` is either a plain string or a word entry
   // { jp, kana, romaji, en } which becomes hoverable.
   text(t, x, y, { size = 40, font = FONTS.gothic, weight = 700, color = '#222', align = 'center', maxW = this.w * 0.9, stroke = null, strokeW = 0, base = 'middle' } = {}) {
-    const str = typeof t === 'string' ? t : t.jp;
+    const str = shown(t);
     const c = this.ctx;
     let s = size;
     c.font = `${weight} ${s}px ${font}`;
@@ -78,7 +86,8 @@ export class Label {
 
   // Stacked vertical text (tategaki), common on tea bottles and onigiri.
   vtext(t, x, y, { size = 60, font = FONTS.mincho, weight = 700, color = '#222', gap = 1.05 } = {}) {
-    const str = typeof t === 'string' ? t : t.jp;
+    // in vertical writing the long-vowel mark turns to run down the column
+    const str = shown(t).replace(/ー/g, '｜');
     const c = this.ctx;
     c.font = `${weight} ${size}px ${font}`;
     c.textAlign = 'center';
