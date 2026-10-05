@@ -13,7 +13,8 @@ export class Player {
     this.yawV = 0;         // smoothed look velocity for a softer feel
     this.pitchV = 0;
     this.radius = 0.28;
-    this.eye = 1.58;
+    this.eyeHeight = 1.58;  // standing eye height (from settings)
+    this.eye = 1.58;        // current, eased toward standing or crouching
     this.keys = new Set();
     this.enabled = false;
     this.bob = 0;
@@ -76,7 +77,7 @@ export class Player {
     this.yawV += (turn * 1.9 - this.yawV) * Math.min(1, dt * 10);
     this.yaw += this.yawV * dt;
 
-    const target = (k.has('ShiftLeft') || k.has('ShiftRight') ? 4.0 : 2.1) * (f || r ? 1 : 0);
+    const target = (k.has('ShiftLeft') || k.has('ShiftRight') ? 4.0 : 2.1) * (f || r ? 1 : 0) * (this.eye < this.eyeHeight - 0.2 ? 0.5 : 1);
     this.speed += (target - this.speed) * Math.min(1, dt * 8);
     const len = Math.hypot(f, r);
     if (len > 0) { this.dirF = f / len; this.dirR = r / len; }
@@ -87,6 +88,10 @@ export class Player {
       this.move(dx, dz);
       this.bob += dt * this.speed * 3.4;
     }
+    // hold C (or Ctrl) to crouch for a look at the bottom shelf
+    const crouch = this.enabled && (k.has('KeyC') || k.has('ControlLeft'));
+    const targetEye = crouch ? Math.min(0.85, this.eyeHeight) : this.eyeHeight;
+    this.eye += (targetEye - this.eye) * Math.min(1, dt * 8);
     const bobY = Math.sin(this.bob) * 0.018 * Math.min(1, this.speed / 2);
     this.camera.position.set(this.pos.x, this.pos.y + this.eye + bobY, this.pos.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');

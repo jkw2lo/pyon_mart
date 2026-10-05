@@ -258,10 +258,14 @@ function togglePopover(id) {
 }
 $('#basket-btn').onclick = () => { updateBasket(); togglePopover('#basket-panel'); };
 $('#settings-btn').onclick = () => togglePopover('#settings-panel');
-const settings = { sens: 1, invert: false, vol: 0.8, tips: true, quality: 'high', script: 'normal' };
+const settings = { sens: 1, invert: false, vol: 0.8, tips: true, quality: 'high', script: 'normal', height: 170 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('pyon-settings') || '{}')); } catch { /* defaults */ }
 function applySettings() {
   player.lookScale = settings.sens;
+  // eyes sit about 11 cm below the top of your head
+  player.eyeHeight = (settings.height - 11) / 100;
+  $('#set-height').value = settings.height;
+  $('#height-val').textContent = `${settings.height} cm`;
   player.invert = settings.invert;
   audio.setVolume(settings.vol);
   $('#set-sens').value = settings.sens;
@@ -274,6 +278,7 @@ function applySettings() {
   try { localStorage.setItem('pyon-settings', JSON.stringify(settings)); } catch { /* not saved */ }
 }
 $('#set-sens').oninput = (e) => { settings.sens = +e.target.value; applySettings(); };
+$('#set-height').oninput = (e) => { settings.height = +e.target.value; applySettings(); };
 $('#set-invert').onchange = (e) => { settings.invert = e.target.checked; applySettings(); };
 $('#set-vol').oninput = (e) => { settings.vol = +e.target.value; applySettings(); };
 $('#set-tips').onchange = (e) => { settings.tips = e.target.checked; applySettings(); };
