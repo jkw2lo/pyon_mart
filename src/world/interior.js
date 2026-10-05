@@ -89,6 +89,26 @@ function hangingSign(parent, word, x, y, z, rotY, { w = 1.3, h = 0.36, bg = '#3a
   return g;
 }
 
+
+// Soft contact shadow on the floor under a fixture (a blurred rounded-rect decal).
+let shadowTex;
+function floorShadow(parent, x, z, w, d, strength = 0.38) {
+  shadowTex ??= canvasTex(128, 128, (c) => {
+    const g = c.createRadialGradient(64, 64, 10, 64, 64, 64);
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(0.55, 'rgba(0,0,0,0.75)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, 128, 128);
+  }, { srgb: false });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.5, d + 0.5), new THREE.MeshBasicMaterial({ color: '#000', alphaMap: shadowTex, transparent: true, opacity: strength, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(x, 0.004, z);
+  m.renderOrder = 1;
+  m.userData.noHit = true;
+  parent.add(m);
+}
+
 export function buildInterior(scene, mats, colliders) {
   const g = new THREE.Group();
   scene.add(g);
@@ -127,21 +147,21 @@ export function buildInterior(scene, mats, colliders) {
   }
   const lights = [];
   for (const [x, z] of [[-3.6, -2.6], [0, -2.6], [3.6, -2.6], [-3.6, 1.6], [0, 1.6], [3.6, 1.6]]) {
-    const L = new THREE.PointLight('#f4f7ff', 3.2, 7.5, 1.5);
+    const L = new THREE.PointLight('#f4f7ff', 2.0, 7.5, 1.5);
     L.position.set(x, 2.5, z);
     g.add(L);
     lights.push(L);
   }
   // shadow-casting downlights over each aisle: products shade the shelves below them
   for (const [x, z] of [[-4.4, -0.6], [-2.0, -0.2], [0.4, -0.2], [2.85, -0.2], [-1.0, -3.5], [2.0, -3.5]]) {
-    const S = new THREE.SpotLight('#f6f8ff', 16, 9, 1.2, 0.85, 1.4);
+    const S = new THREE.SpotLight('#f6f8ff', 21, 9, 1.25, 0.8, 1.4);
     S.position.set(x, 2.66, z);
     S.target.position.set(x, 0, z + 0.01);
     S.castShadow = true;
     S.shadow.mapSize.set(1024, 1024);
     S.shadow.bias = -0.0006;
     S.shadow.normalBias = 0.015;
-    S.shadow.radius = 3;
+    S.shadow.radius = 2;
     S.shadow.camera.near = 0.3;
     S.shadow.camera.far = 4;
     g.add(S, S.target);
@@ -176,6 +196,15 @@ export function buildInterior(scene, mats, colliders) {
     const x0 = fx0 + d * dw;
     addBox(g, [0.05, 2.05, 0.06], mats.darkMetal, [x0, 1.175, fz], { cast: false });
     addBox(g, [0.025, 0.9, 0.04], mats.aluminium, [x0 + dw - 0.09, 1.2, fz + 0.04], { cast: false });
+    if (d % 2 === 0) {
+      const t = new Label(128, 48).fill('#0b0d10');
+      t.ctx.fillStyle = '#ff5a3a'; t.ctx.font = '700 30px monospace'; t.ctx.textAlign = 'center'; t.ctx.fillText(`${3 + (d % 3)}.0℃`, 64, 35);
+      const tm = t.material();
+      tm.emissive = new THREE.Color('#ffffff'); tm.emissiveMap = tm.map; tm.emissiveIntensity = 0.7;
+      const disp = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.0375), tm);
+      disp.position.set(x0 + dw / 2, 2.28, -4.095);
+      g.add(disp);
+    }
     addBox(g, [0.02, 1.95, 0.02], mats.fridgeLight, [x0 + 0.04, 1.175, fz - 0.06], { cast: false, receive: false });
     shelfYs.forEach((y, s) => {
       addBox(g, [dw - 0.04, 0.02, shelfDepth], mats.shelfWhite, [x0 + dw / 2, y - 0.01, -4.6], { cast: false });
@@ -248,6 +277,7 @@ export function buildInterior(scene, mats, colliders) {
   for (const G of gondolas) {
     const zc = (gz0 + gz1) / 2;
     addBox(g, [0.9, 0.12, gLen], mats.shelfWhite, [G.x, 0.06, zc]);
+    for (const side of [-1, 1]) addBox(g, [0.012, 0.1, gLen], std('#3a4150', { roughness: 0.5 }), [G.x + side * 0.452, 0.05, zc], { cast: false });
     addBox(g, [0.06, 1.55, gLen], mats.shelfWhite, [G.x, 0.775, zc]);
     addBox(g, [0.9, 0.03, gLen], mats.shelfEdge, [G.x, 1.56, zc]);
     for (const z of [gz0, gz1]) addBox(g, [0.92, 1.58, 0.03], mats.shelfWhite, [G.x, 0.79, z]);
@@ -364,6 +394,18 @@ export function buildInterior(scene, mats, colliders) {
     ];
     for (const p of parts) p.userData.register = true;
   }
+  // little wire rack of impulse buys on the customer side of the counter
+  {
+    const rx = kx - 0.3, rz = 0.5;
+    const wire = std('#c9ced4', { metalness: 0.8, roughness: 0.3 });
+    for (const [y, dz] of [[1.0, 0], [1.13, 0]]) {
+      addBox(g, [0.14, 0.008, 0.36], wire, [rx, y, rz + dz], { cast: false });
+    }
+    addBox(g, [0.008, 0.18, 0.36], wire, [rx + 0.07, 1.08, rz], { cast: false });
+    stockRun(stocker, tags, ['gum', 'caramel'], { start: V(rx - 0.07, 1.004, rz + 0.17), along: V(0, 0, -1), inward: V(1, 0, 0), length: 0.34, depth: 0.12, rotY: FACE.nx, rows: 1, tag: false, maxFacings: 3 });
+    stockRun(stocker, tags, ['lipcream', 'gum'], { start: V(rx - 0.07, 1.134, rz + 0.17), along: V(0, 0, -1), inward: V(1, 0, 0), length: 0.34, depth: 0.12, rotY: FACE.nx, rows: 1, tag: false, maxFacings: 2 });
+  }
+
   // hot snack case
   addBox(g, [0.5, 0.05, 0.9], std('#2a2d33'), [kx, 1.015, -1.6]);
   const hotGlass = addBox(g, [0.5, 0.45, 0.9], new THREE.MeshStandardMaterial({ color: '#ffe8c0', transparent: true, opacity: 0.18, roughness: 0.05, depthWrite: false }), [kx, 1.26, -1.6], { cast: false, receive: false });
@@ -525,6 +567,14 @@ export function buildInterior(scene, mats, colliders) {
   ns.rotation.y = Math.PI;
   g.add(ns);
 
+  // contact shadows under the big fixtures
+  for (const x of [-3.2, -0.8, 1.6]) floorShadow(g, x, -0.05, 0.95, 4.6);
+  floorShadow(g, -5.55, -0.6, 0.9, 5.6);                 // chiller
+  floorShadow(g, -1.2, -4.55, 9.3, 0.95, 0.3);           // fridges
+  floorShadow(g, -2.0, 3.45, 1.8, 0.75);                 // freezer
+  floorShadow(g, 4.25, 0.3, 0.75, 5.4);                  // counter
+  floorShadow(g, -3.25, 4.72, 4.9, 0.4, 0.3);            // magazine rack
+  floorShadow(g, 5.8, 4.02, 0.4, 1.65);                  // cosme corner
   const products = stocker.build(byId);
   g.add(products);
 

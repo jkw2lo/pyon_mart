@@ -14,6 +14,7 @@ import { makeMaterials, Colliders } from './world/common.js';
 import { buildExterior } from './world/exterior.js';
 import { buildInterior } from './world/interior.js';
 import { buildDecor } from './world/decor.js';
+import { buildDetails } from './world/details.js';
 import { createEnvironment } from './environment.js';
 import { Player } from './player.js';
 import { Inspector } from './inspect.js';
@@ -59,8 +60,8 @@ const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, sample
 const composer = new EffectComposer(renderer, rt);
 composer.addPass(new RenderPass(scene, camera));
 const gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
-gtao.updateGtaoMaterial({ radius: 0.35, distanceExponent: 1.5, thickness: 1.2, scale: 1.0, samples: 8 });
-gtao.blendIntensity = 0.85;
+gtao.updateGtaoMaterial({ radius: 0.5, distanceExponent: 1.6, thickness: 1.5, scale: 1.15, samples: 8 });
+gtao.blendIntensity = 1.0;
 composer.addPass(gtao);
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.3, 0.3, 3.5);
 composer.addPass(bloom);
@@ -80,6 +81,7 @@ const colliders = new Colliders();
 const ext = buildExterior(scene, mats, colliders);
 const int = buildInterior(scene, mats, colliders);
 const decor = buildDecor(scene, mats, colliders, ext);
+const details = buildDetails(scene);
 const env = createEnvironment(scene, renderer);
 
 // Capture the shop interior once and use it for reflections on the floor, glass and metal.
@@ -231,7 +233,7 @@ function togglePopover(id) {
 }
 $('#basket-btn').onclick = () => { updateBasket(); togglePopover('#basket-panel'); };
 $('#settings-btn').onclick = () => togglePopover('#settings-panel');
-const settings = { sens: 1, invert: false, vol: 0.8, tips: true };
+const settings = { sens: 1, invert: false, vol: 0.8, tips: true, quality: 'high' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('pyon-settings') || '{}')); } catch { /* defaults */ }
 function applySettings() {
   player.lookScale = settings.sens;
@@ -241,19 +243,42 @@ function applySettings() {
   $('#set-invert').checked = settings.invert;
   $('#set-vol').value = settings.vol;
   $('#set-tips').checked = settings.tips;
+  $('#set-quality').value = settings.quality;
+  applyQuality(settings.quality);
   try { localStorage.setItem('pyon-settings', JSON.stringify(settings)); } catch { /* not saved */ }
 }
 $('#set-sens').oninput = (e) => { settings.sens = +e.target.value; applySettings(); };
 $('#set-invert').onchange = (e) => { settings.invert = e.target.checked; applySettings(); };
 $('#set-vol').oninput = (e) => { settings.vol = +e.target.value; applySettings(); };
 $('#set-tips').onchange = (e) => { settings.tips = e.target.checked; applySettings(); };
+$('#set-quality').onchange = (e) => { settings.quality = e.target.value; applySettings(); };
+
+// Graphics presets. High: everything. Balanced: no ambient occlusion, fewer shadow
+// lights, lower resolution. Low: no post effects and no interior shadows.
+let quality = null;
+function applyQuality(q) {
+  if (q === quality) return;
+  quality = q;
+  const dpr = Math.min(devicePixelRatio, q === 'high' ? 1.5 : q === 'balanced' ? 1.25 : 1);
+  renderer.setPixelRatio(dpr);
+  resize();
+  gtao.enabled = q === 'high';
+  bloomAllowed = q !== 'low';
+  int.lights.filter((L) => L.isSpotLight).forEach((L, i) => {
+    L.castShadow = q === 'high' || (q === 'balanced' && i >= 1 && i <= 3);
+  });
+  env.sun.shadow.mapSize.setScalar(q === 'low' ? 1024 : 2048);
+  if (env.sun.shadow.map) { env.sun.shadow.map.dispose(); env.sun.shadow.map = null; }
+  scene.traverse((o) => { if (o.material && !Array.isArray(o.material)) o.material.needsUpdate = true; });
+  refreshShadows();
+  setTime(hours);
+}
 $('#reset-words').onclick = () => {
   found.clear();
   try { localStorage.removeItem('pyon-words'); } catch { /* fine */ }
   updateWordCount();
   toast('Word book cleared');
 };
-applySettings();
 updateBasket();
 
 // Japanese inside the UI (receipt, basket, clerk) is hoverable too
@@ -323,6 +348,7 @@ $('#wb-close').onclick = () => toggleWordbook(false);
 
 // --- time of day ------------------------------------------------------------------
 let hours = 16.5;
+let bloomAllowed = true;
 const timeInput = $('#time');
 function setTime(h) {
   hours = ((h % 24) + 24) % 24;
@@ -336,11 +362,12 @@ function setTime(h) {
   for (const L of ext.streetLights) L.intensity = st.night * 18;
   for (const L of ext.canopyLights) L.intensity = st.night * 25;
   refreshShadows();
-  bloom.enabled = st.night > 0.25;
+  bloom.enabled = bloomAllowed && st.night > 0.25;
   bloom.strength = st.night * 0.35;
 }
 timeInput.addEventListener('input', () => setTime(parseFloat(timeInput.value)));
 setTime(hours);
+applySettings();
 
 // --- doors ------------------------------------------------------------------------
 const door = { amt: 0, target: 0, idle: 0, center: new THREE.Vector3(3, 0, 5.1) };
@@ -367,11 +394,11 @@ function updateDoors(dt) {
 const ray = new THREE.Raycaster();
 const mouse = { x: innerWidth / 2, y: innerHeight / 2, inside: false };
 const ndc = new THREE.Vector2();
-const targets = [ext.group, int.group, decor.group];
+const targets = [ext.group, int.group, decor.group, details.group];
 const REACH = 2.8;
 let aim = null;
 
-renderer.domElement.addEventListener('pointermove', (e) => { if (mouse.frozen) return; mouse.x = e.clientX; mouse.y = e.clientY; mouse.inside = true; });
+renderer.domElement.addEventListener('pointermove', (e) => { if (mouse.frozen) return; mouse.x = e.clientX; mouse.y = e.clientY; mouse.inside = true; mouse.dirty = true; });
 renderer.domElement.addEventListener('pointerleave', () => { if (!mouse.frozen) { mouse.inside = false; clearHover(); } });
 
 // soft glow shell shown over the product under the cursor
@@ -503,6 +530,7 @@ updateWordCount();
 // --- loop -------------------------------------------------------------------------
 let last = performance.now();
 let lastStep = 0;
+let lastCamKey = '', lastAim = 0;
 let fps = 60;
 function frame() {
   const now = performance.now();
@@ -517,7 +545,14 @@ function frame() {
   const step = Math.floor(player.bob / Math.PI);
   if (step !== lastStep && player.speed > 0.5) audio.step(player.inside);
   lastStep = step;
-  if (player.enabled) updateAim();
+  // hover raycasts are the main CPU cost: only redo them when the view or mouse changes
+  const camKey = `${player.pos.x.toFixed(3)},${player.pos.z.toFixed(3)},${player.yaw.toFixed(3)},${player.pitch.toFixed(3)}`;
+  if (player.enabled && (mouse.dirty || camKey !== lastCamKey || now - lastAim > 250)) {
+    updateAim();
+    mouse.dirty = false;
+    lastCamKey = camKey;
+    lastAim = now;
+  }
   audio.update(player.inside, door.amt);
   if (inspecting) {
     // the scene behind the viewer is blurred anyway; skip the expensive passes
@@ -538,6 +573,6 @@ window.pyon = {
   get aim() { return aim && { kind: aim.kind, id: aim.id, word: aim.word?.jp, reach: aim.reach }; },
   get mouse() { return mouse; },
   go(x, z, yaw = 0, pitch = 0) { player.pos.set(x, 0, z); player.yaw = yaw; player.pitch = pitch; player.update(0); },
-  hoverAt(x, y, freeze = false) { mouse.x = x; mouse.y = y; mouse.inside = true; mouse.frozen = freeze; },
+  hoverAt(x, y, freeze = false) { mouse.x = x; mouse.y = y; mouse.inside = true; mouse.frozen = freeze; mouse.dirty = true; },
   start() { enter.onclick(); },
 };

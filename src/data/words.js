@@ -313,4 +313,11 @@ export const words = {
   cornSoup: W('コーンスープ', 'こーんすーぷ', 'kōn sūpu', 'corn soup'),
   cheesecake: W('チーズケーキ', 'ちーずけーき', 'chīzu kēki', 'cheesecake'),
   hotDrink: W('ホット', 'ほっと', 'hotto', 'hot (drinks)'),
+  shokaki: W('消火器', 'しょうかき', 'shōkaki', 'fire extinguisher'),
+  tomare: W('止まれ', 'とまれ', 'tomare', 'stop'),
+  kanSenyo: W('空き缶専用', 'あきかんせんよう', 'akikan sen-yō', 'empty cans only'),
+  ondo: W('温度', 'おんど', 'ondo', 'temperature'),
+  shodoku: W('消毒', 'しょうどく', 'shōdoku', 'disinfectant'),
+  oshibori: W('おてふき', 'おてふき', 'otefuki', 'wet wipes'),
+  hashi: W('お箸', 'おはし', 'o-hashi', 'chopsticks'),
 };

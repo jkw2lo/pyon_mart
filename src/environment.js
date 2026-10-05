@@ -99,7 +99,7 @@ export function createEnvironment(scene, renderer) {
     moonMat.opacity = night;
 
     scene.fog.color.copy(fogDay).lerp(fogDusk, dusk * 0.5).lerp(fogNight, night);
-    scene.environmentIntensity = 0.12 + day * 0.38;
+    scene.environmentIntensity = 0.1 + day * 0.3;
     renderer.toneMappingExposure = 0.95;
     return state;
   }

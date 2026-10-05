@@ -801,15 +801,23 @@ function lipstick(def) {
   const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.8, r * 0.8, 0.012, 24), gold);
   sleeve.position.y = h + 0.012;
   g.add(sleeve);
-  // the bullet, cut at an angle
-  const bullet = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.66, r * 0.66, 0.024, 24), plain(def.shade, { roughness: 0.25 }));
-  bullet.position.y = h + 0.03;
+  // the bullet: a cylinder whose top is sliced at an angle, edges softly rounded
+  const br = r * 0.66, bh = 0.03, slant = 0.012;
+  const bulletGeo = new THREE.CylinderGeometry(br, br, bh, 32, 6);
+  const bp = bulletGeo.attributes.position;
+  for (let i = 0; i < bp.count; i++) {
+    const x = bp.getX(i), y = bp.getY(i), zz = bp.getZ(i);
+    const t = (y + bh / 2) / bh;                                  // 0 bottom → 1 top
+    const cut = ((x / br) + 1) / 2 * slant;                       // lower on the +x side
+    bp.setY(i, y - cut * Math.pow(t, 1.5));
+    // round the rim of the slanted face a touch
+    const rr = Math.hypot(x, zz);
+    if (t > 0.99 && rr > br * 0.9) { const k = 0.92; bp.setX(i, x * k); bp.setZ(i, zz * k); bp.setY(i, bp.getY(i) - 0.0008); }
+  }
+  bulletGeo.computeVertexNormals();
+  const bullet = new THREE.Mesh(bulletGeo, plain(def.shade, { roughness: 0.22 }));
+  bullet.position.y = h + 0.018 + bh / 2;
   g.add(bullet);
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(r * 0.66, 20, 12, 0, TAU, 0, Math.PI / 2), plain(def.shade, { roughness: 0.25 }));
-  tip.scale.set(1, 1.3, 1);
-  tip.rotation.z = 0.5;
-  tip.position.y = h + 0.042;
-  g.add(tip);
   return g;
 }
 
