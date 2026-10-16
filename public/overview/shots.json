@@ -1,0 +1,53 @@
+{
+  "url": "https://jkw2lo.github.io/pyon_mart/",
+  "shots": [
+    {
+      "file": "desktop.png",
+      "settle": 3000,
+      "steps": [
+        "eval:[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Enter').click()",
+        "wait:2500",
+        "key:w:5000",
+        "wait:600"
+      ]
+    },
+    {
+      "file": "reading.png",
+      "settle": 3000,
+      "steps": [
+        "eval:[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Enter').click()",
+        "wait:2500",
+        "key:w:5000",
+        "tap:720,450",
+        "wait:1500",
+        "key:w:3500",
+        "wait:800",
+        "tap:720,450",
+        "wait:1500",
+        "key:w:1500",
+        "wait:800",
+        "hover:1024,236",
+        "wait:300",
+        "hover:1026,238",
+        "wait:900"
+      ],
+      "region": [
+        700,
+        100,
+        740,
+        600
+      ]
+    },
+    {
+      "file": "night.png",
+      "settle": 3000,
+      "steps": [
+        "eval:[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Enter').click()",
+        "wait:2500",
+        "key:w:3000",
+        "key:t",
+        "wait:2500"
+      ]
+    }
+  ]
+}

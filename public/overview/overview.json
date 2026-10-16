@@ -1,0 +1,39 @@
+{
+  "version": 3,
+  "name": "Pyon Mart",
+  "tagline": "A 3D konbini to read",
+  "pitch": "Walk around a 3D Japanese convenience store, pick up anything, and read the Japanese on all of it.",
+  "accent": "#2f3e6e",
+  "status": "Live",
+
+  "problem": "Textbook Japanese never looks like a real shop shelf.",
+  "stats": [
+    { "value": "153", "label": "fictional products to pick up" },
+    { "value": "297", "label": "words to find, each with its reading" },
+    { "value": "0", "label": "image or model files: all drawn in code" }
+  ],
+
+  "features": [
+    { "title": "Hover to read", "text": "Point at any Japanese text in the shop to see its reading and meaning.",
+      "details": ["Packaging, signs, price tags, posters, even the road", "A word book keeps track of the ones you've found", "Hiragana-only mode reprints every label in kana"],
+      "screen": { "src": "reading.png", "alt": "Inside the shop, hovering over the レジ sign shows its reading れじ, romaji reji and meaning register / checkout" } },
+    { "title": "Day and night", "text": "A time-of-day slider moves the sun and moon across the sky.",
+      "details": ["At night the sign, windows and vending machines glow"],
+      "screen": { "src": "night.png", "alt": "Pyon Mart at night under a starry sky, its sign, windows and vending machines lit up" } },
+    { "title": "Pick it up", "text": "Click any product to turn it over in your hands.",
+      "details": ["Store-brand lines share one look, like a real konbini"] },
+    { "title": "Check out", "text": "Bring your basket to the register for the usual questions.",
+      "details": ["温めますか？ 袋はご利用ですか？", "Then a printed receipt"] }
+  ],
+
+  "screens": [
+    { "src": "desktop.png", "alt": "Pyon Mart from the car park: the shopfront with banners for oden, ice cream and autumn flavours, and vending machines", "caption": "Open 24 hours" }
+  ],
+
+  "facts": {
+    "worksOn": "Desktop, with a keyboard",
+    "data": "Runs in your browser",
+    "builtWith": "three.js and Vite",
+    "started": "Oct 2026"
+  }
+}
