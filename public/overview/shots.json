@@ -2,7 +2,7 @@
   "url": "https://jkw2lo.github.io/pyon_mart/",
   "shots": [
     {
-      "file": "desktop.png",
+      "file": "desktop.jpg",
       "settle": 3000,
       "steps": [
         "eval:[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Enter').click()",
@@ -39,7 +39,7 @@
       ]
     },
     {
-      "file": "night.png",
+      "file": "night.jpg",
       "settle": 3000,
       "steps": [
         "eval:[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Enter').click()",

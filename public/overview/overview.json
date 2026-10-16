@@ -19,7 +19,7 @@
       "screen": { "src": "reading.png", "alt": "Inside the shop, hovering over the レジ sign shows its reading れじ, romaji reji and meaning register / checkout" } },
     { "title": "Day and night", "text": "A time-of-day slider moves the sun and moon across the sky.",
       "details": ["At night the sign, windows and vending machines glow"],
-      "screen": { "src": "night.png", "alt": "Pyon Mart at night under a starry sky, its sign, windows and vending machines lit up" } },
+      "screen": { "src": "night.jpg", "alt": "Pyon Mart at night under a starry sky, its sign, windows and vending machines lit up" } },
     { "title": "Pick it up", "text": "Click any product to turn it over in your hands.",
       "details": ["Store-brand lines share one look, like a real konbini"] },
     { "title": "Check out", "text": "Bring your basket to the register for the usual questions.",
@@ -27,7 +27,7 @@
   ],
 
   "screens": [
-    { "src": "desktop.png", "alt": "Pyon Mart from the car park: the shopfront with banners for oden, ice cream and autumn flavours, and vending machines", "caption": "Open 24 hours" }
+    { "src": "desktop.jpg", "alt": "Pyon Mart from the car park: the shopfront with banners for oden, ice cream and autumn flavours, and vending machines", "caption": "Open 24 hours" }
   ],
 
   "facts": {
